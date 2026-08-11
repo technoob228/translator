@@ -7,4 +7,5 @@ fastapi
 uvicorn[standard]
 soundfile
 requests
-mlx-whisper
+# mlx-whisper ставится отдельно в install.sh: на macOS < 13.5 его нет,
+# и это не должно валить установку (движок умеет работать без него)

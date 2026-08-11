@@ -14,23 +14,35 @@ if [ "$(uname -m)" != "arm64" ]; then
 fi
 
 eval "$(/opt/homebrew/bin/brew shellenv)" 2>/dev/null || true
-PY="$(brew --prefix 2>/dev/null)/bin/python3"
-[ -x "$PY" ] || PY="$(command -v python3)"
 
 say "Окружение Python"
+OSVER=$(sw_vers -productVersion); OSMAJ=${OSVER%%.*}
+echo "macOS $OSVER"
+# строго Python 3.13: у всех наших пакетов есть готовые сборки под него
+# на любой macOS от 11 — ничего не компилируется из исходников
+brew list python@3.13 >/dev/null 2>&1 || brew install python@3.13
+PY="$(brew --prefix)/opt/python@3.13/bin/python3.13"
+if [ -x .venv/bin/python ] && ! .venv/bin/python -c \
+    'import sys; sys.exit(0 if sys.version_info[:2] == (3, 13) else 1)'; then
+  echo "Пересоздаю окружение под Python 3.13…"
+  rm -rf .venv
+fi
 [ -d .venv ] || "$PY" -m venv .venv
 .venv/bin/pip install -q --upgrade pip
-if ! .venv/bin/pip install -q -r requirements.txt; then
-  # у пакета av свежие готовые сборки только для macOS 14+;
-  # на системе постарше берём версию 15.1.0 (собрана для macOS 13+),
-  # в крайнем случае — собираем из исходников с ffmpeg
-  echo "Подбираю совместимую версию av для этой macOS…"
-  .venv/bin/pip install -q "av==15.1.0" || {
-    echo "Ставлю ffmpeg и собираю av (это надолго, но один раз)…"
-    brew install ffmpeg pkg-config
-    .venv/bin/pip install -q av
-  }
-  .venv/bin/pip install -q -r requirements.txt
+# av (декодер аудио): выбираем версию с готовой сборкой под эту macOS
+if [ "$OSMAJ" -ge 14 ]; then AV="av"
+elif [ "$OSMAJ" -eq 13 ]; then AV="av<16"
+else AV="av<14"; fi
+.venv/bin/pip install -q "$AV" || {
+  echo "Готовой сборки av не нашлось — ставлю ffmpeg и собираю (долго, один раз)…"
+  brew install ffmpeg pkg-config
+  .venv/bin/pip install -q av
+}
+.venv/bin/pip install -q -r requirements.txt
+# GPU-ускорение точной модели (MLX) — есть только на macOS 13.5+
+if ! .venv/bin/pip install -q mlx-whisper 2>/dev/null; then
+  echo "⚠ GPU-ускорение (MLX) на этой macOS недоступно — точное распознавание"
+  echo "  пойдёт по процессору, чуть медленнее. Всё остальное работает."
 fi
 
 say "Офлайн-перевод (модели argos: испанский → английский → русский)"
@@ -53,9 +65,14 @@ HF_HUB_DISABLE_PROGRESS_BARS=1 .venv/bin/python - <<'EOF'
 from faster_whisper import WhisperModel
 print("  черновая модель (small)…")
 WhisperModel("small", device="auto", compute_type="int8")
-print("  точная модель (large-v3-turbo, MLX)…")
-from huggingface_hub import snapshot_download
-snapshot_download("mlx-community/whisper-large-v3-turbo")
+try:
+    import mlx_whisper  # noqa: F401
+    print("  точная модель (large-v3-turbo, GPU)…")
+    from huggingface_hub import snapshot_download
+    snapshot_download("mlx-community/whisper-large-v3-turbo")
+except ImportError:
+    print("  точная модель (large-v3-turbo, CPU)…")
+    WhisperModel("large-v3-turbo", device="auto", compute_type="int8")
 print("  распознавание готово")
 EOF
 
