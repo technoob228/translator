@@ -14,6 +14,7 @@ if [ "$(uname -m)" != "arm64" ]; then
 fi
 
 eval "$(/opt/homebrew/bin/brew shellenv)" 2>/dev/null || true
+export HOMEBREW_NO_AUTO_UPDATE=1
 
 say "Окружение Python"
 OSVER=$(sw_vers -productVersion); OSMAJ=${OSVER%%.*}
