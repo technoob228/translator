@@ -16,7 +16,7 @@ fi
 eval "$(/opt/homebrew/bin/brew shellenv)" 2>/dev/null || true
 export HOMEBREW_NO_AUTO_UPDATE=1
 
-say "Окружение Python"
+say "Шаг 1 из 5: окружение Python (~5 мин)"
 OSVER=$(sw_vers -productVersion); OSMAJ=${OSVER%%.*}
 echo "macOS $OSVER"
 # строго Python 3.13: у всех наших пакетов есть готовые сборки под него
@@ -39,14 +39,15 @@ else AV="av<14"; fi
   brew install ffmpeg pkg-config
   .venv/bin/pip install -q av
 }
-.venv/bin/pip install -q -r requirements.txt
+# без -q: здесь качаются сотни мегабайт — пусть виден прогресс
+.venv/bin/pip install -r requirements.txt
 # GPU-ускорение точной модели (MLX) — есть только на macOS 13.5+
-if ! .venv/bin/pip install -q mlx-whisper 2>/dev/null; then
+if ! .venv/bin/pip install mlx-whisper; then
   echo "⚠ GPU-ускорение (MLX) на этой macOS недоступно — точное распознавание"
   echo "  пойдёт по процессору, чуть медленнее. Всё остальное работает."
 fi
 
-say "Офлайн-перевод (модели argos: испанский → английский → русский)"
+say "Шаг 2 из 5: офлайн-перевод, ~500 МБ (испанский → английский → русский)"
 .venv/bin/python - <<'EOF'
 from argostranslate import package, translate
 have = {(l.code) for l in translate.get_installed_languages()}
@@ -61,8 +62,8 @@ if not ({"es", "en", "ru"} <= have):
 print("  перевод готов:", translate.translate("hola mundo", "es", "ru"))
 EOF
 
-say "Модели распознавания речи (~2.5 ГБ, один раз; лучше по домашнему Wi-Fi)"
-HF_HUB_DISABLE_PROGRESS_BARS=1 .venv/bin/python - <<'EOF'
+say "Шаг 3 из 5: модели распознавания речи, ~2.5 ГБ (самый долгий шаг)"
+.venv/bin/python - <<'EOF'
 from faster_whisper import WhisperModel
 print("  черновая модель (small)…")
 WhisperModel("small", device="auto", compute_type="int8")
@@ -77,7 +78,7 @@ except ImportError:
 print("  распознавание готово")
 EOF
 
-say "Локальный ИИ (Ollama — чат и конспекты без интернета, ~3 ГБ)"
+say "Шаг 4 из 5: локальный ИИ Ollama, ~3 ГБ (по желанию)"
 OLLAMA=yes
 if [ -t 0 ] || [ -e /dev/tty ]; then
   printf "Поставить локальный ИИ? Без него ИИ работает только через облако [Y/n] "
@@ -94,7 +95,7 @@ if [ "$OLLAMA" = yes ]; then
   ollama pull qwen3:4b-instruct || echo "Модель не скачалась — можно повторить позже: ollama pull qwen3:4b-instruct"
 fi
 
-say "Значки на рабочем столе"
+say "Шаг 5 из 5: значки на рабочем столе"
 cat > "$HOME/Desktop/Студия.command" <<EOF
 #!/bin/bash
 exec "\$HOME/translator/start.sh"
