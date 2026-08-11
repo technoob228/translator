@@ -20,7 +20,18 @@ PY="$(brew --prefix 2>/dev/null)/bin/python3"
 say "Окружение Python"
 [ -d .venv ] || "$PY" -m venv .venv
 .venv/bin/pip install -q --upgrade pip
-.venv/bin/pip install -q -r requirements.txt
+if ! .venv/bin/pip install -q -r requirements.txt; then
+  # у пакета av свежие готовые сборки только для macOS 14+;
+  # на системе постарше берём версию 15.1.0 (собрана для macOS 13+),
+  # в крайнем случае — собираем из исходников с ffmpeg
+  echo "Подбираю совместимую версию av для этой macOS…"
+  .venv/bin/pip install -q "av==15.1.0" || {
+    echo "Ставлю ffmpeg и собираю av (это надолго, но один раз)…"
+    brew install ffmpeg pkg-config
+    .venv/bin/pip install -q av
+  }
+  .venv/bin/pip install -q -r requirements.txt
+fi
 
 say "Офлайн-перевод (модели argos: испанский → английский → русский)"
 .venv/bin/python - <<'EOF'
