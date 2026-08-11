@@ -6,7 +6,18 @@
 set -e
 cd "$(dirname "$0")"
 
-say() { printf '\n\033[1m== %s ==\033[0m\n' "$1"; }
+# Весь вывод — ещё и в файл: если установка оборвётся, по логу видно где.
+# Бутстрап уже включает запись, тогда второй раз не дублируем.
+LOG="${STUDIO_LOG:-$HOME/studio-install.log}"
+if [ -z "$STUDIO_LOG" ]; then
+  export STUDIO_LOG="$LOG"
+  exec > >(tee -a "$LOG") 2>&1
+fi
+
+STEP="начало"
+say() { STEP="$1"; printf '\n\033[1m== %s ==\033[0m\n' "$1"; }
+# молчаливых обрывов быть не должно: любая упавшая команда объясняется
+trap 'c=$?; [ $c -eq 0 ] || { printf "\n\033[1m⚠ Установка прервалась на шаге «%s» (код %s).\033[0m\n" "$STEP" "$c"; echo "Что делать: повторить команду ниже, она продолжит с этого места —"; echo "  cd ~/translator && ./install.sh"; echo "Полный лог для Миши: $LOG"; }' EXIT
 
 if [ "$(uname -m)" != "arm64" ]; then
   echo "Нужен Mac с чипом Apple (M1 и новее) — распознавание речи иначе не заработает."
@@ -21,7 +32,7 @@ OSVER=$(sw_vers -productVersion); OSMAJ=${OSVER%%.*}
 echo "macOS $OSVER"
 # строго Python 3.13: у всех наших пакетов есть готовые сборки под него
 # на любой macOS от 11 — ничего не компилируется из исходников
-brew list python@3.13 >/dev/null 2>&1 || brew install python@3.13
+brew list python@3.13 >/dev/null 2>&1 || brew install python@3.13 </dev/null
 PY="$(brew --prefix)/opt/python@3.13/bin/python3.13"
 if [ -x .venv/bin/python ] && ! .venv/bin/python -c \
     'import sys; sys.exit(0 if sys.version_info[:2] == (3, 13) else 1)'; then
@@ -36,7 +47,7 @@ elif [ "$OSMAJ" -eq 13 ]; then AV="av<16"
 else AV="av<14"; fi
 .venv/bin/pip install -q "$AV" || {
   echo "Готовой сборки av не нашлось — ставлю ffmpeg и собираю (долго, один раз)…"
-  brew install ffmpeg pkg-config
+  brew install ffmpeg pkg-config </dev/null
   .venv/bin/pip install -q av
 }
 # без -q: здесь качаются сотни мегабайт — пусть виден прогресс
@@ -86,13 +97,13 @@ if [ -t 0 ] || [ -e /dev/tty ]; then
   case "$ans" in [nNнН]*) OLLAMA=no ;; esac
 fi
 if [ "$OLLAMA" = yes ]; then
-  command -v ollama >/dev/null 2>&1 || brew install ollama
+  command -v ollama >/dev/null 2>&1 || brew install ollama </dev/null
   brew services start ollama >/dev/null 2>&1 || true
   for i in $(seq 1 20); do
     curl -fsS -m 1 http://localhost:11434 >/dev/null 2>&1 && break
     sleep 1
   done
-  ollama pull qwen3:4b-instruct || echo "Модель не скачалась — можно повторить позже: ollama pull qwen3:4b-instruct"
+  ollama pull qwen3:4b-instruct </dev/null || echo "Модель не скачалась — можно повторить позже: ollama pull qwen3:4b-instruct"
 fi
 
 say "Шаг 5 из 5: значки на рабочем столе"
@@ -111,4 +122,5 @@ say "Готово"
 echo "Запускаю приложение… (в первый раз macOS спросит разрешение на микрофон — нажать «Разрешить»)"
 echo "Дальше просто двойной клик по значку «Студия» на рабочем столе."
 echo "Ключ облачного ИИ вставляется в приложении: Настройки → ключ Uno."
+trap - EXIT          # установка позади: запуск приложения — уже не её ошибка
 ./start.sh
