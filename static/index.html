@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Студия — переводчик лекций</title>
+<link rel="stylesheet" href="app.css">
+</head><body>
+<div class="app">
+  <div class="rail" id="rail">
+    <button class="ic on" data-s="lecture" title="Лекция">🎙</button>
+    <button class="ic" data-s="lib" title="Библиотека">📚</button>
+    <button class="ic" data-s="vocab" title="Словарь">📖</button>
+    <button class="ic" data-s="consp" title="Конспекты">📝</button>
+    <div style="flex:1"></div>
+    <button class="ic" data-s="set" title="Настройки" style="margin-bottom:10px">⚙️</button>
+  </div>
+
+  <div class="stage">
+
+    <!-- СТАРТ -->
+    <section class="scr on" id="scr-start"><div class="center">
+      <h2>Новая лекция</h2>
+      <div class="sub">выбери предмет — лекция сохранится в его папку</div>
+      <div class="courses" id="course-pick"></div>
+      <div class="micbox">Микрофон:
+        <select id="mic-sel" style="max-width:180px"></select>
+        <div class="lvlbar"><i id="mic-lvl"></i></div>
+        <span id="mic-ok" class="bad">…</span></div>
+      <button class="bigstart" id="btn-start">Начать лекцию</button>
+      <div id="start-status" class="phint"></div>
+    </div></section>
+
+    <!-- LIVE -->
+    <section class="scr" id="scr-live">
+      <div style="flex:1; display:flex; flex-direction:column; min-width:0">
+        <div class="hdr">
+          <span class="rec"><span class="dot"></span> <span id="timer">0:00</span></span>
+          <span class="badge demo" id="demo-badge" style="display:none">ДЕМО — играет тестовый файл</span>
+          <span class="course" id="live-course"></span>
+          <div class="lvlbar" style="margin-left:auto"><i id="live-lvl"></i></div>
+          <select id="live-src" class="hsel" title="Язык лекции">
+            <option value="auto">язык: авто</option>
+            <option value="es">язык: испанский</option>
+            <option value="en">язык: английский</option>
+            <option value="pt">язык: португальский</option>
+            <option value="fr">язык: французский</option>
+            <option value="it">язык: итальянский</option>
+            <option value="de">язык: немецкий</option>
+          </select>
+          <button class="hbtn" id="btn-pause">⏸ Пауза</button>
+          <button class="hbtn" id="btn-stop">■ Стоп</button>
+        </div>
+        <div class="feed" id="feed"></div>
+        <div class="live">
+          <div class="warnbox" id="pause-banner" style="display:none; margin-bottom:10px">
+            ⏸ Лекция на паузе — всё сохранено, можно закрыть ноутбук.
+            <button class="hbtn primary" id="btn-resume" style="margin-left:10px">▶ Продолжить</button>
+          </div>
+          <div class="lb" id="live-lb">СЕЙЧАС ГОВОРИТ</div>
+          <div class="p-es"><span id="p-es"></span><span class="caret"></span></div>
+          <div class="p-ru"><span class="rough">черновой перевод</span><span id="p-ru"></span></div>
+          <div class="statusline" id="statusline"></div>
+        </div>
+      </div>
+      <div class="side">
+        <div class="tabs" id="side-tabs">
+          <button class="tab on" data-p="notes">Заметки</button>
+          <button class="tab" data-p="tr">Перевод</button>
+          <button class="tab" data-p="dict">Словарь</button>
+          <button class="tab" data-p="chat">Чат ИИ</button>
+        </div>
+        <div class="panel on" id="p-notes">
+          <textarea class="notes" id="notes" spellcheck="false"
+            placeholder="# Мои заметки&#10;пиши свободно — сохранится само"></textarea>
+          <div class="phint">цитата фразы: меню «⋯» или ⌘L (последняя) · ⌘1 важное · ⌘2 не поняла
+            <span id="notes-status" style="float:right; color:var(--green)"></span></div>
+        </div>
+        <div class="panel" id="p-tr">
+          <div class="pad">
+            <div class="langrow" id="tr-langs">
+              <button class="on" data-l="ru:es">ru → es</button>
+              <button data-l="es:ru">es → ru</button>
+              <button data-l="en:es">en → es</button>
+            </div>
+            <textarea class="inp" id="tr-in" rows="2"
+              placeholder="фраза… (Enter — перевести)"></textarea>
+            <div class="result" id="tr-out" style="display:none"></div>
+            <button class="hbtn" id="btn-big" style="margin-top:10px; width:100%">
+              Показать крупно</button>
+          </div>
+          <div class="trhist" id="tr-hist"></div>
+        </div>
+        <div class="panel" id="p-dict">
+          <div style="padding:12px 14px 0">
+            <button class="hbtn" id="btn-addword-live" style="width:100%">+ Добавить слово/фразу</button>
+          </div>
+          <div class="pad" id="dict-list" style="flex:1"></div>
+          <div class="phint">или клик по слову лектора в ленте → «+ В словарь»</div>
+        </div>
+        <div class="panel" id="p-chat">
+          <div class="modes" id="chat-modes">
+            <button class="on" data-m="local">Локально</button>
+            <button data-m="cloud">Облако</button>
+            <button data-m="agent">Агент</button>
+            <select id="chat-model" style="display:none"></select>
+          </div>
+          <div class="llmbar" id="llm-bar" style="display:none">
+            <i id="llm-dot"></i><span id="llm-bar-text"></span>
+            <button id="llm-bar-btn"></button>
+          </div>
+          <div class="pad" id="chat-log" style="flex:1"></div>
+          <div class="quick">
+            <button data-q="Что он только что сказал? Коротко.">Что он только что сказал?</button>
+            <button data-q="Перескажи последние 10 минут лекции в 3 пунктах.">Последние 10 минут</button>
+          </div>
+          <div class="chatin"><input class="inp" id="chat-in"
+            placeholder="Спросить про лекцию… (Enter)"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ИТОГ -->
+    <section class="scr" id="scr-summary"><div class="center">
+      <h2>Лекция записана</h2>
+      <div class="sub" id="sum-title"></div>
+      <div class="stats" id="sum-stats"></div>
+      <div style="display:flex; gap:10px; align-items:center">
+        <select class="inp" id="sum-ai" style="width:auto" title="какой ИИ пишет конспект"></select>
+        <button class="hbtn primary" id="btn-consp" style="padding:11px 26px">Сделать конспект</button>
+        <button class="hbtn" id="btn-later" style="padding:11px 26px">Позже — в библиотеку</button>
+      </div>
+      <div id="sum-status" class="phint"></div>
+    </div></section>
+
+    <!-- ПОВТОРЕНИЕ -->
+    <section class="scr" id="scr-review">
+      <div style="flex:1; display:flex; flex-direction:column; min-width:0">
+        <div class="player">
+          <audio id="player" controls preload="none"></audio>
+          <button class="hbtn" id="btn-back-lib">← Библиотека</button>
+        </div>
+        <div class="feed" id="rev-feed"></div>
+      </div>
+      <div class="vsplit" id="rev-split" title="потяни, чтобы изменить ширину"></div>
+      <div class="side" id="rev-side">
+        <div class="tabs" id="rev-tabs">
+          <button class="tab on" data-p="sum">Конспект</button>
+          <button class="tab" data-p="mynotes">Мои заметки</button>
+        </div>
+        <div class="panel on" id="rp-sum">
+          <div class="mdbar" id="mdbar" style="display:none">
+            <button data-c="bold" title="жирным"><b>Ж</b></button>
+            <button data-c="insertUnorderedList" title="список">≡</button>
+            <button data-c="h2" title="заголовок">H</button>
+            <span style="flex:1"></span>
+            <small>выдели текст и жми кнопку</small>
+          </div>
+          <div class="summary" id="rev-summary"></div>
+          <div class="exp">
+            <button class="hbtn" id="btn-edit">✎ Править</button>
+            <select class="inp" id="rev-ai" style="flex:1; min-width:110px" title="какой ИИ пишет конспект"></select>
+            <button class="hbtn" id="btn-gen">⟳ Конспект ИИ</button>
+            <a class="hbtn" id="btn-md" style="text-decoration:none">Markdown</a>
+            <button class="hbtn" id="btn-pdf">PDF</button>
+            <button class="hbtn" id="btn-share">Поделиться</button>
+          </div>
+          <div class="sharebox" id="share-box" style="display:none">
+            <a id="share-url" target="_blank"></a>
+            <span id="share-status"></span>
+            <span style="flex:1"></span>
+            <button id="share-open">Открыть</button>
+            <button id="share-copy">Скопировать</button>
+          </div>
+        </div>
+        <div class="panel" id="rp-mynotes">
+          <div class="pad" id="rev-notes" style="flex:1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- БИБЛИОТЕКА -->
+    <section class="scr" id="scr-lib"><div class="lib">
+      <input class="inp" id="lib-search" placeholder="Поиск по всем лекциям…"
+        style="max-width:420px; margin-bottom:20px">
+      <div id="lib-search-out"></div>
+      <div class="courses" style="justify-content:flex-start; margin-bottom:20px"
+        id="lib-courses"></div>
+      <table id="lib-table"><tbody></tbody></table>
+    </div></section>
+
+    <!-- СЛОВАРЬ -->
+    <section class="scr" id="scr-vocab"><div class="lib">
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px; max-width:900px">
+        <h2 style="font-size:19px" id="vocab-title">Мой словарь</h2>
+        <div style="flex:1"></div>
+        <button class="hbtn" id="btn-addword">+ Добавить слово</button>
+        <button class="hbtn primary" id="btn-cards">Повторить карточки</button>
+        <a class="hbtn" href="/api/vocab.tsv" style="text-decoration:none">Экспорт в Anki</a>
+      </div>
+      <table id="vocab-table"><tbody></tbody></table>
+    </div></section>
+
+    <!-- КОНСПЕКТЫ -->
+    <section class="scr" id="scr-consp"><div class="lib">
+      <h2 style="font-size:19px; margin-bottom:16px">Конспекты</h2>
+      <table id="consp-table"><tbody></tbody></table>
+    </div></section>
+
+    <!-- НАСТРОЙКИ -->
+    <section class="scr" id="scr-set"><div class="lib" id="set-form">
+      <h2 style="font-size:19px; margin-bottom:16px">Настройки</h2>
+      <div class="setrow"><b>Микрофон<small>петличка даст звук лучше встроенного</small></b>
+        <select id="s-mic"></select></div>
+      <div class="setrow"><b>Точность распознавания<small>точнее = чуть больше задержка финала</small></b>
+        <select id="s-acc">
+          <option value="fast">Быстро (small)</option>
+          <option value="balanced">Сбалансированно (medium)</option>
+          <option value="max">Максимум (large-v3-turbo)</option>
+        </select></div>
+      <div class="setrow"><b>Чувствительность микрофона<small>«высокая» — если лектор далеко или звук тихий (из колонок)</small></b>
+        <select id="s-sens">
+          <option value="low">низкая (шумная аудитория)</option>
+          <option value="normal">обычная</option>
+          <option value="high">высокая (тихий звук)</option>
+        </select></div>
+      <div class="setrow"><b>Язык лекции<small>«авто» — определяется сам по первым фразам</small></b>
+        <select id="s-src">
+          <option value="auto">определять автоматически</option>
+          <option value="es">испанский</option>
+          <option value="en">английский</option>
+          <option value="pt">португальский</option>
+          <option value="fr">французский</option>
+          <option value="it">итальянский</option>
+          <option value="de">немецкий</option>
+        </select></div>
+      <div class="setrow"><b>Язык перевода<small>язык субтитров и конспектов</small></b>
+        <select id="s-lang"><option value="ru">русский</option>
+          <option value="en">английский</option></select></div>
+      <div class="setrow"><b>Локальная модель ИИ<small id="s-local-status">…</small></b>
+        <span style="display:flex; gap:8px">
+          <input class="inp" id="s-lmodel" placeholder="qwen3:4b" style="flex:1">
+          <button class="hbtn" id="btn-ollama" style="flex:none">…</button></span></div>
+      <div class="setrow"><b>Облачный ИИ<small>гейтвей Uno подключён; ключ — «Ключ Uno» ниже (или свой). Модели — через запятую; «проверить» подберёт точные имена</small></b>
+        <span style="display:flex; flex-direction:column; gap:6px">
+          <input class="inp" id="s-curl" placeholder="https://api.getuno.xyz/v1">
+          <input class="inp" id="s-ckey" placeholder="ключ (пусто = Ключ Uno)" type="password">
+          <textarea class="inp" id="s-cmodels" rows="2"
+            placeholder="claude-opus-5, gpt-5.5, gemini-3.1-pro, gemma-3-27b-it"></textarea>
+          <span style="display:flex; gap:8px; align-items:center">
+            <button class="hbtn" id="btn-checkmodels">Проверить модели на гейтвее</button>
+            <small id="s-cmodels-status" style="color:var(--dim)"></small></span>
+        </span></div>
+      <div class="setrow"><b>Режим агента<small>файлы, поиск, терминал (с подтверждением), публикация — только с облачной моделью</small></b>
+        <select id="s-agent"><option value="off">выключен</option>
+          <option value="on">включён</option></select></div>
+      <div class="setrow"><b>Ключ Uno<small>для «Поделиться» — публикация конспектов по ссылке</small></b>
+        <input class="inp" id="s-uno" type="password" placeholder="api key"></div>
+      <button class="hbtn primary" id="btn-save-set" style="padding:9px 22px">Сохранить</button>
+      <span id="set-status" class="phint"></span>
+    </div></section>
+  </div>
+</div>
+
+<!-- меню карточки -->
+<div class="menu" id="menu">
+  <button class="mi" data-a="star">⭐ <span>Важное<small>соберутся в конспекте</small></span><span class="k">⌘1</span></button>
+  <button class="mi" data-a="q">❓ <span>Не поняла<small>ИИ объяснит после лекции</small></span><span class="k">⌘2</span></button>
+  <button class="mi" data-a="note">📝 <span>В заметки цитатой</span><span class="k">⌘L</span></button>
+  <button class="mi" data-a="explain">💬 <span>Объяснить в чате</span></button>
+  <button class="mi" data-a="copy">⧉ <span>Копировать</span></button>
+</div>
+
+<!-- поповер слова -->
+<div class="pop" id="pop">
+  <b id="pop-w"></b> <span class="pos" id="pop-pos"></span><br>
+  <span id="pop-tr">…</span><br>
+  <button class="save" id="pop-save">+ В словарь</button>
+</div>
+
+<div class="bigph" id="bigph"><div id="bigph-text"></div><small>клик — закрыть</small></div>
+
+<div class="approve" id="approve">
+  <b>ИИ хочет выполнить команду в терминале</b>
+  <div class="cmd" id="approve-cmd"></div>
+  <div style="display:flex; gap:8px; justify-content:flex-end">
+    <button class="hbtn danger" id="approve-no">Отклонить</button>
+    <button class="hbtn primary" id="approve-yes">Разрешить</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="flash" id="addword"><div class="fcard" style="text-align:left">
+  <b style="font-size:16px">Новое слово или фраза</b>
+  <input class="inp" id="aw-word" placeholder="слово / фраза на языке лекции"
+    style="margin-top:12px">
+  <div style="display:flex; gap:8px; margin-top:8px">
+    <input class="inp" id="aw-tr" placeholder="перевод" style="flex:1">
+    <button class="hbtn" id="aw-ai">ИИ ↺</button>
+  </div>
+  <input class="inp" id="aw-comment" placeholder="комментарий (необязательно)"
+    style="margin-top:8px">
+  <div class="row" style="justify-content:flex-end">
+    <button class="hbtn" id="aw-cancel">Отмена</button>
+    <button class="hbtn primary" id="aw-save">Сохранить</button>
+  </div>
+</div></div>
+
+<div class="flash" id="flash"><div class="fcard">
+  <div class="w" id="f-word"></div>
+  <div class="a" id="f-answer"></div>
+  <div class="row">
+    <button class="hbtn" id="f-show">Показать</button>
+    <button class="hbtn" id="f-no" style="display:none">Не помню</button>
+    <button class="hbtn primary" id="f-yes" style="display:none">Помню</button>
+    <button class="hbtn" id="f-close">Закрыть</button>
+  </div>
+</div></div>
+
+<script src="app.js"></script>
+</body></html>

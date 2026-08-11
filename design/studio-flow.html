@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Студия — интерактивный прототип</title>
+<style>
+:root{
+  --bg:#f6f6f5; --panel:#fff; --panel2:#fafafa; --line:#e7e7e5;
+  --txt:#1c1c1e; --dim:#8e8e93; --dimmer:#b5b5ba;
+  --acc:#0a6cff; --accsoft:#eef4ff; --star:#e6a817; --red:#d0453e;
+}
+*{box-sizing:border-box; margin:0}
+body{background:var(--bg); color:var(--txt); overflow:hidden;
+  font:14px/1.5 -apple-system,"SF Pro Text","Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased}
+button{font:inherit}
+/* ── верхняя панель прототипа ── */
+.top{display:flex; align-items:center; gap:12px; padding:9px 16px;
+  background:#fff; border-bottom:1px solid var(--line)}
+.top b{font-size:13.5px}
+.top span{color:var(--dim); font-size:12.5px}
+.tourbtn{margin-left:auto; background:var(--txt); color:#fff; border:none;
+  border-radius:18px; padding:7px 16px; font-size:13px; cursor:pointer; font-weight:600}
+/* ── каркас ── */
+.app{display:flex; height:calc(100vh - 47px)}
+.rail{width:56px; flex:none; background:#fff; border-right:1px solid var(--line);
+  display:flex; flex-direction:column; align-items:center; padding-top:12px; gap:5px}
+.ic{width:40px; height:40px; display:grid; place-items:center; font-size:16px;
+  border-radius:10px; cursor:pointer; opacity:.45; border:none; background:none}
+.ic.on{background:var(--bg); opacity:1; outline:1px solid var(--line)}
+.ic .lbl{display:none}
+.stage{flex:1; min-width:0; position:relative}
+.scr{display:none; height:100%}
+.scr.on{display:flex}
+/* ── общие ── */
+.hdr{display:flex; align-items:center; gap:12px; padding:10px 18px;
+  background:var(--panel); border-bottom:1px solid var(--line); flex:none}
+.rec{display:flex; align-items:center; gap:7px; font-weight:600;
+  font-variant-numeric:tabular-nums}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--red);
+  animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.3}}
+.course{color:var(--dim)}
+.lvl{display:flex; gap:2px; align-items:flex-end; height:13px}
+.lvl i{width:3px; background:#a9bfa9; border-radius:1px; animation:eq .7s infinite alternate}
+.lvl i:nth-child(1){height:5px}.lvl i:nth-child(2){height:10px; animation-delay:.15s}
+.lvl i:nth-child(3){height:7px; animation-delay:.3s}.lvl i:nth-child(4){height:12px; animation-delay:.1s}
+@keyframes eq{to{transform:scaleY(.4)}}
+.hbtn{border:1px solid var(--line); background:#fff; color:#444;
+  border-radius:8px; padding:5px 12px; font-size:12.5px; cursor:pointer}
+.hbtn:hover{background:var(--panel2)}
+.hbtn.primary{background:var(--txt); color:#fff; border-color:var(--txt); font-weight:600}
+.feed{flex:1; overflow-y:auto; padding:18px 22px; scroll-behavior:smooth}
+.card{margin:0 0 10px; padding:12px 44px 12px 16px; background:#fff; position:relative;
+  border:1px solid var(--line); border-radius:12px; max-width:740px;
+  box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.card .t{font-size:11px; color:var(--dimmer); margin-bottom:3px;
+  font-variant-numeric:tabular-nums}
+.card .ru{font-size:16.5px; line-height:1.45}
+.card .es{font-size:12.5px; color:var(--dim); margin-top:4px}
+.card.star{border-left:3px solid var(--star)}
+.card.star .t::after{content:" · важное"; color:var(--star); font-weight:600}
+.card.q{border-left:3px solid var(--red)}
+.card.q .t::after{content:" · не поняла"; color:var(--red); font-weight:600}
+.card.catchup{background:var(--accsoft); border-color:#d8e5fb}
+.card.catchup .t{color:var(--acc); font-weight:600}
+.card.catchup .ru{font-size:13.5px; color:#3a4a63}
+.dots{position:absolute; top:8px; right:8px; width:28px; height:28px; border:none;
+  background:none; border-radius:8px; color:var(--dimmer); font-size:16px;
+  cursor:pointer; opacity:0; transition:.15s}
+.card:hover .dots{opacity:1}
+.dots:hover{background:var(--panel2); color:var(--txt)}
+.es-w{cursor:pointer; border-bottom:1px dotted var(--dimmer)}
+.es-w:hover{color:var(--acc)}
+.live{flex:none; border-top:1px solid var(--line); background:#fff;
+  padding:14px 22px 16px; box-shadow:0 -4px 14px rgba(0,0,0,.04)}
+.live .lb{font-size:10.5px; letter-spacing:.12em; color:var(--acc); font-weight:700}
+.p-es{font-size:15px; color:var(--dim); min-height:23px; margin-top:5px}
+.caret{display:inline-block; width:2px; height:15px; background:var(--acc);
+  vertical-align:-2px; margin-left:3px; animation:blink 1s infinite}
+.p-ru{font-size:19px; min-height:29px; margin-top:2px; font-weight:500}
+.p-ru .rough{color:var(--dimmer); font-weight:400; font-size:12px; margin-right:6px}
+/* правая панель */
+.side{width:340px; flex:none; display:flex; flex-direction:column;
+  border-left:1px solid var(--line); background:#fff}
+.tabs{display:flex; flex:none; border-bottom:1px solid var(--line)}
+.tab{flex:1; text-align:center; padding:10px 0; font-size:12.5px; color:var(--dim);
+  cursor:pointer; border:none; background:none; border-bottom:2px solid transparent}
+.tab.on{color:var(--txt); border-bottom-color:var(--txt); font-weight:600}
+.panel{display:none; flex:1; flex-direction:column; overflow:hidden}
+.panel.on{display:flex}
+.notes{flex:1; margin:12px; background:var(--panel2); border:1px solid var(--line);
+  border-radius:10px; padding:12px; font-size:13.5px; color:#3a3a3c;
+  overflow-y:auto; white-space:pre-wrap; outline:none}
+.phint{padding:0 14px 10px; color:var(--dimmer); font-size:11.5px}
+.inp{width:100%; background:#fff; border:1px solid var(--line); color:var(--txt);
+  border-radius:9px; padding:8px 11px; font-size:13px; outline:none}
+.inp:focus{border-color:var(--acc)}
+.result{margin-top:9px; padding:9px 11px; background:#fff; border-radius:9px;
+  font-size:13.5px; border:1px solid var(--line)}
+.result .src{color:var(--dimmer); font-size:11.5px}
+.langrow{display:flex; gap:6px; margin-bottom:9px; font-size:11.5px}
+.langrow button{padding:3px 10px; border-radius:12px; background:#fff;
+  border:1px solid var(--line); color:var(--dim); cursor:pointer}
+.langrow button.on{color:var(--txt); border-color:var(--txt); font-weight:600}
+.pad{padding:12px 14px; overflow-y:auto}
+.wrow{display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line);
+  border-radius:9px; margin-bottom:7px; background:#fff; font-size:13px}
+.wrow b{font-size:13.5px}
+.wrow .tr{color:var(--dim); flex:1}
+.wrow .n{font-size:11px; color:var(--dimmer)}
+.msg{margin-bottom:8px; padding:9px 11px; border-radius:10px; font-size:13.5px;
+  border:1px solid var(--line); background:#fff}
+.msg.me{background:var(--accsoft); border-color:#d8e5fb}
+.msg .who{font-size:11px; color:var(--dimmer); margin-bottom:1px}
+.quick{display:flex; gap:6px; flex-wrap:wrap; padding:0 14px 8px}
+.quick button{border:1px solid var(--line); background:var(--panel2); color:#555;
+  border-radius:14px; padding:4px 11px; font-size:11.5px; cursor:pointer}
+.chatin{padding:10px 14px; border-top:1px solid var(--line)}
+/* стартовый экран */
+.center{flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:18px}
+.center h2{font-size:21px; font-weight:700}
+.center .sub{color:var(--dim); margin-top:-10px}
+.courses{display:flex; gap:10px; flex-wrap:wrap; justify-content:center}
+.cb{padding:12px 18px; border-radius:13px; border:1px solid var(--line);
+  background:#fff; cursor:pointer; text-align:left; font-size:14px;
+  box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.cb small{display:block; color:var(--dim); font-size:11.5px}
+.cb.on{border-color:var(--txt); box-shadow:0 0 0 1px var(--txt)}
+.micbox{display:flex; align-items:center; gap:12px; background:#fff;
+  border:1px solid var(--line); border-radius:12px; padding:12px 18px; font-size:13px}
+.micbox .ok{color:#2e7d4f; font-weight:600}
+.bigstart{background:var(--txt); color:#fff; border:none; border-radius:14px;
+  padding:14px 44px; font-size:16px; font-weight:700; cursor:pointer}
+/* итог */
+.stats{display:flex; gap:12px; flex-wrap:wrap; justify-content:center}
+.st{background:#fff; border:1px solid var(--line); border-radius:12px;
+  padding:14px 22px; text-align:center; min-width:110px}
+.st b{font-size:21px; display:block}
+.st span{color:var(--dim); font-size:12px}
+/* плеер */
+.player{flex:none; display:flex; align-items:center; gap:14px; padding:12px 18px;
+  background:#fff; border-bottom:1px solid var(--line)}
+.play{width:34px; height:34px; border-radius:50%; background:var(--txt); border:none;
+  color:#fff; display:grid; place-items:center; font-size:13px; cursor:pointer}
+.track{flex:1; height:4px; background:var(--line); border-radius:3px; position:relative}
+.track .done{position:absolute; inset:0 62% 0 0; background:var(--txt); border-radius:3px}
+.mark{position:absolute; top:-4px; width:3px; height:12px; border-radius:2px}
+.card.now{border-color:var(--acc); background:var(--accsoft)}
+.summary{padding:6px 16px 12px; overflow-y:auto; font-size:13.5px; flex:1}
+.summary h4{font-size:11px; color:var(--dim); letter-spacing:.08em; margin:14px 0 6px}
+.summary li{margin:4px 0 4px 16px; color:#3a3a3c}
+.term{display:inline-block; background:var(--panel2); border:1px solid var(--line);
+  border-radius:7px; padding:2px 9px; margin:2px; font-size:12.5px}
+.term i{color:var(--dim); font-style:normal}
+.exp{display:flex; gap:8px; padding:12px 14px; border-top:1px solid var(--line)}
+.exp .hbtn{flex:1; text-align:center}
+/* таблицы */
+.lib{padding:24px; overflow-y:auto; flex:1}
+table{border-collapse:collapse; width:100%; max-width:880px; background:#fff;
+  border:1px solid var(--line); border-radius:12px; overflow:hidden}
+td,th{padding:11px 14px; text-align:left; border-bottom:1px solid var(--line);
+  font-size:13.5px}
+th{color:var(--dim); font-size:11px; letter-spacing:.06em; background:var(--panel2)}
+td .sub{color:var(--dimmer); font-size:11.5px}
+tr:last-child td{border-bottom:none}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--panel2)}
+.badge{font-size:11.5px; padding:2px 9px; border-radius:10px; background:var(--panel2);
+  border:1px solid var(--line); color:var(--dim)}
+.badge.ok{color:#2e7d4f; border-color:#cfe5d8; background:#f2faf5}
+/* настройки */
+.setrow{display:flex; align-items:center; gap:14px; background:#fff; max-width:560px;
+  border:1px solid var(--line); border-radius:12px; padding:13px 16px; margin-bottom:10px}
+.setrow b{font-size:13.5px; flex:1}
+.setrow small{display:block; color:var(--dim); font-weight:400}
+select{font:inherit; border:1px solid var(--line); border-radius:8px; padding:5px 9px;
+  background:#fff; color:var(--txt)}
+/* меню карточки */
+.menu{position:fixed; z-index:80; background:#fff; border:1px solid var(--line);
+  border-radius:12px; box-shadow:0 12px 34px rgba(0,0,0,.14); padding:5px;
+  width:250px; display:none}
+.menu.on{display:block}
+.mi{display:flex; gap:9px; align-items:baseline; width:100%; border:none;
+  background:none; text-align:left; padding:8px 10px; border-radius:8px;
+  cursor:pointer; font-size:13px}
+.mi:hover{background:var(--panel2)}
+.mi small{display:block; color:var(--dimmer); font-size:11px}
+.mi .k{margin-left:auto; color:var(--dimmer); font-size:11px}
+/* поповер слова */
+.pop{position:fixed; z-index:80; background:#fff; border:1px solid var(--line);
+  border-radius:11px; padding:10px 13px; font-size:12.5px; width:215px; display:none;
+  box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.pop.on{display:block}
+.pop b{font-size:14px}
+.pop .pos{color:var(--dim); font-size:11px}
+.pop .save{margin-top:7px; display:inline-block; color:var(--acc); cursor:pointer;
+  font-weight:600; background:none; border:none; padding:0; font-size:12.5px}
+/* большая фраза */
+.bigph{position:fixed; inset:0; z-index:90; background:#fff; display:none;
+  align-items:center; justify-content:center; flex-direction:column; gap:14px;
+  cursor:pointer; text-align:center; padding:40px}
+.bigph.on{display:flex}
+.bigph div{font-size:44px; font-weight:700; max-width:900px}
+.bigph small{color:var(--dim)}
+/* тур */
+.hl{position:relative; z-index:70 !important;
+  box-shadow:0 0 0 3px var(--acc), 0 0 0 8px rgba(10,108,255,.18) !important;
+  border-radius:12px}
+.shade{position:fixed; inset:0; background:rgba(20,20,22,.28); z-index:60; display:none}
+.shade.on{display:block}
+.tourbox{position:fixed; z-index:85; left:50%; transform:translateX(-50%);
+  bottom:22px; width:520px; max-width:92vw; background:#fff; border-radius:14px;
+  border:1px solid var(--line); box-shadow:0 16px 44px rgba(0,0,0,.22);
+  padding:14px 16px; display:none}
+.tourbox.on{display:block}
+.tourbox .step{font-size:11px; color:var(--dimmer); font-weight:600}
+.tourbox .tt{font-size:14px; margin:5px 0 10px; line-height:1.5}
+.tourbox .row{display:flex; gap:8px; align-items:center}
+.tourbox .row .sp{flex:1}
+</style></head><body>
+
+<div class="top"><b>Студия · интерактивный прототип</b>
+  <span>всё кликается: рейл, вкладки, «⋯» на фразах, слова, кнопки</span>
+  <button class="tourbtn" id="btn-tour">▶ Экскурсия по сценариям</button>
+</div>
+
+<div class="app">
+  <div class="rail" id="rail">
+    <button class="ic" data-s="start" title="Лекция">🎙</button>
+    <button class="ic" data-s="lib" title="Библиотека">📚</button>
+    <button class="ic" data-s="vocab" title="Словарь">📖</button>
+    <button class="ic" data-s="consp" title="Конспекты">📝</button>
+    <div style="flex:1"></div>
+    <button class="ic" data-s="set" title="Настройки" style="margin-bottom:10px">⚙️</button>
+  </div>
+
+  <div class="stage">
+
+    <!-- ── СТАРТ ── -->
+    <section class="scr on" id="scr-start"><div class="center">
+      <h2>Новая лекция</h2>
+      <div class="sub">выбери предмет — лекция сохранится в его папку</div>
+      <div class="courses" id="course-pick">
+        <button class="cb on">Economía I<small>лекция 5 · вт, чт 12:00</small></button>
+        <button class="cb">Historia Argentina<small>лекция 7 · ср 9:00</small></button>
+        <button class="cb">Matemática<small>лекция 8 · пт 14:00</small></button>
+        <button class="cb" style="border-style:dashed">+ предмет</button>
+      </div>
+      <div class="micbox" id="micbar">Микрофон: MacBook
+        <div class="lvl"><i></i><i></i><i></i><i></i></div>
+        <span class="ok">вас слышно</span></div>
+      <button class="bigstart" id="btn-start">Начать лекцию</button>
+    </div></section>
+
+    <!-- ── LIVE ── -->
+    <section class="scr" id="scr-live">
+      <div style="flex:1; display:flex; flex-direction:column; min-width:0">
+        <div class="hdr">
+          <span class="rec"><span class="dot"></span> <span id="timer">47:12</span></span>
+          <span class="course">Economía I · лекция 5</span>
+          <div class="lvl" style="margin-left:auto"><i></i><i></i><i></i><i></i></div>
+          <button class="hbtn" id="btn-strip">Свернуть в полоску</button>
+          <button class="hbtn" id="btn-stop">■ Стоп</button>
+        </div>
+        <div class="feed" id="feed-live">
+          <div class="card"><div class="t">12:01:40</div>
+            <div class="ru">Сегодня мы поговорим об инфляции и денежной политике.</div>
+            <div class="es">Hoy vamos a hablar de la <span class="es-w">inflación</span> y la política monetaria.</div>
+            <button class="dots">⋯</button></div>
+          <div class="card catchup"><div class="t">СВОДКА · последние 10 минут · ИИ</div>
+            <div class="ru">Лектор ввёл определение инфляции, отличил её от разового скачка цен и начал разбор трёх подходов: монетаристского, структуралистского и инерционного.</div></div>
+          <div class="card" id="card-demo"><div class="t">12:03:48</div>
+            <div class="ru">Существует три основных подхода к объяснению её причин.</div>
+            <div class="es">Existen tres <span class="es-w" id="word-demo">enfoques</span> principales para explicar sus causas.</div>
+            <button class="dots" id="dots-demo">⋯</button></div>
+        </div>
+        <div class="live" id="live-zone">
+          <div class="lb">СЕЙЧАС ГОВОРИТ</div>
+          <div class="p-es"><span class="w"></span><span class="caret"></span></div>
+          <div class="p-ru"><span class="rough">черновой перевод</span><span class="w"></span></div>
+        </div>
+      </div>
+      <div class="side">
+        <div class="tabs" id="side-tabs">
+          <button class="tab on" data-p="notes">Заметки</button>
+          <button class="tab" data-p="tr">Перевод</button>
+          <button class="tab" data-p="dict">Словарь</button>
+          <button class="tab" data-p="chat">Чат ИИ</button>
+        </div>
+        <div class="panel on" id="p-notes">
+          <div class="notes" contenteditable="true" spellcheck="false"># Инфляция — лекция 5
+
+- инфляция = устойчивый рост цен (не разовый!)
+- 3 подхода к причинам
+  > «Existen tres enfoques principales…» · 12:03</div>
+          <div class="phint">пиши свободно — каждая строка получает таймкод лекции;
+цитаты из транскрипта добавляются через меню «⋯» или ⌘L</div>
+        </div>
+        <div class="panel" id="p-tr">
+          <div class="pad">
+            <div class="langrow">
+              <button class="on">ru → es</button><button>es → ru</button><button>en → es</button>
+            </div>
+            <input class="inp" value="можно повторить, пожалуйста?">
+            <div class="result">¿Puede repetir, por favor?<div class="src">Enter — перевести · ⌘C — скопировано</div></div>
+            <button class="hbtn" id="btn-big" style="margin-top:10px; width:100%">
+              Показать крупно (повернуть экран собеседнику)</button>
+          </div>
+        </div>
+        <div class="panel" id="p-dict">
+          <div class="pad" id="dict-list">
+            <input class="inp" placeholder="Найти слово…" style="margin-bottom:10px">
+            <div class="wrow"><b>enfoque</b><span class="tr">подход</span><span class="n">12:03</span></div>
+            <div class="wrow"><b>sostenido</b><span class="tr">устойчивый</span><span class="n">12:02</span></div>
+            <div class="wrow"><b>déficit fiscal</b><span class="tr">бюджетный дефицит</span><span class="n">11:58</span></div>
+          </div>
+          <div class="phint">сюда попадают слова из поповера «+ В словарь»;
+повторение карточками — во вкладке «Словарь» слева</div>
+        </div>
+        <div class="panel" id="p-chat">
+          <div class="pad" id="chat-log" style="flex:1">
+            <div class="msg me"><div class="who">Катя</div>объясни простыми словами структуралистский подход</div>
+            <div class="msg"><div class="who">ИИ · видит транскрипт</div>Структуралисты считают, что инфляция растёт не из-за «печатания денег», а из-за узких мест в экономике. Лектор назвал это вторым из трёх подходов (12:03).</div>
+          </div>
+          <div class="quick">
+            <button id="qk-1">Что он только что сказал?</button>
+            <button>Переведи последний слайд</button>
+            <button>Дай контекст термина</button>
+          </div>
+          <div class="chatin"><input class="inp" placeholder="Спросить про лекцию…"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ИТОГ ── -->
+    <section class="scr" id="scr-summary"><div class="center">
+      <h2>Лекция записана</h2>
+      <div class="sub">Economía I · лекция 5 · всё сохранено локально</div>
+      <div class="stats" id="sum-stats">
+        <div class="st"><b>1:32</b><span>длительность</span></div>
+        <div class="st"><b>247</b><span>фраз</span></div>
+        <div class="st"><b>14</b><span>заметок</span></div>
+        <div class="st"><b>8</b><span>новых слов</span></div>
+        <div class="st"><b>3 + 2</b><span>важное · не поняла</span></div>
+      </div>
+      <div style="display:flex; gap:10px">
+        <button class="hbtn primary" id="btn-consp" style="padding:11px 26px">Сделать конспект</button>
+        <button class="hbtn" id="btn-later" style="padding:11px 26px">Позже — в библиотеку</button>
+      </div>
+    </div></section>
+
+    <!-- ── ПОВТОРЕНИЕ / КОНСПЕКТ ── -->
+    <section class="scr" id="scr-review">
+      <div style="flex:1; display:flex; flex-direction:column; min-width:0">
+        <div class="player" id="rev-player">
+          <button class="play">▶</button>
+          <span style="color:var(--dim); font-variant-numeric:tabular-nums">0:35:10&nbsp;/&nbsp;1:32:04</span>
+          <div class="track"><div class="done"></div>
+            <div class="mark" style="left:23%; background:var(--star)"></div>
+            <div class="mark" style="left:31%; background:var(--red)"></div>
+            <div class="mark" style="left:64%; background:var(--star)"></div></div>
+          <button class="hbtn">1×</button>
+        </div>
+        <div class="feed">
+          <div class="card"><div class="t">12:02:15</div>
+            <div class="ru">Инфляция — это устойчивый рост общего уровня цен.</div>
+            <div class="es">La inflación es el aumento sostenido del nivel general de precios.</div>
+            <button class="dots">⋯</button></div>
+          <div class="card now"><div class="t">12:03:48 · играет — клик по любой фразе перематывает</div>
+            <div class="ru">Существует три основных подхода к объяснению её причин.</div>
+            <div class="es">Existen tres enfoques principales para explicar sus causas.</div>
+            <button class="dots">⋯</button></div>
+          <div class="card"><div class="t">12:04:31</div>
+            <div class="ru">Начнём с монетаристского объяснения.</div>
+            <div class="es">Empecemos por la explicación monetarista.</div>
+            <button class="dots">⋯</button></div>
+        </div>
+      </div>
+      <div class="side" id="rev-side">
+        <div class="tabs">
+          <button class="tab on">Конспект</button>
+          <button class="tab">Мои заметки</button>
+        </div>
+        <div class="summary">
+          <h4>КОРОТКО · сгенерировано ИИ, можно править</h4>
+          <li>Инфляция = устойчивый рост цен; в Аргентине — с 1950-х</li>
+          <li>Три подхода: монетаристский, структуралистский, инерционный</li>
+          <li>Домашнее: глава 7, задачи 1–4 к семинару</li>
+          <h4>ТЕРМИНЫ (8)</h4>
+          <span class="term">inflación <i>· инфляция</i></span>
+          <span class="term">enfoque <i>· подход</i></span>
+          <span class="term">nivel de precios <i>· уровень цен</i></span>
+          <h4>РАЗОБРАТЬ (метки «не поняла»)</h4>
+          <li>12:03 — объяснение ИИ готово, нажми чтобы раскрыть</li>
+          <h4>ВОЗМОЖНЫЕ ВОПРОСЫ К ЭКЗАМЕНУ</h4>
+          <li>Чем инфляция отличается от разового роста цен?</li>
+        </div>
+        <div class="exp" id="rev-exp">
+          <button class="hbtn">Markdown</button><button class="hbtn">PDF</button>
+          <button class="hbtn">Obsidian</button><button class="hbtn">Anki</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── БИБЛИОТЕКА ── -->
+    <section class="scr" id="scr-lib"><div class="lib">
+      <input class="inp" placeholder="Поиск по всем лекциям… (например: инфляция)"
+        style="max-width:420px; margin-bottom:20px">
+      <div class="courses" style="justify-content:flex-start; margin-bottom:20px">
+        <button class="cb on">Economía I<small>9 лекций · 14 ч</small></button>
+        <button class="cb">Historia Argentina<small>6 лекций · 9 ч</small></button>
+        <button class="cb">Matemática<small>7 лекций · 10 ч</small></button>
+      </div>
+      <table id="lib-table">
+        <tr><th>ЛЕКЦИЯ</th><th>ДАТА</th><th>ДЛИТ.</th><th>МЕТКИ</th><th>КОНСПЕКТ</th></tr>
+        <tr class="click" id="lib-row"><td>Лекция 5 · Инфляция и денежная политика<div class="sub">247 фраз · 14 заметок · 8 слов</div></td>
+          <td>сегодня</td><td>1:32</td><td class="sub">важное 3 · вопросы 2</td><td><span class="badge ok">готов</span></td></tr>
+        <tr class="click"><td>Лекция 4 · Спрос, предложение, эластичность<div class="sub">301 фраза · 22 заметки</div></td>
+          <td>7 авг</td><td>1:28</td><td class="sub">важное 5</td><td><span class="badge ok">готов</span></td></tr>
+        <tr class="click"><td>Лекция 3 · Введение в микроэкономику<div class="sub">280 фраз · 9 заметок</div></td>
+          <td>3 авг</td><td>1:30</td><td class="sub">вопросы 1</td><td><span class="badge">создать</span></td></tr>
+      </table>
+    </div></section>
+
+    <!-- ── СЛОВАРЬ ── -->
+    <section class="scr" id="scr-vocab"><div class="lib">
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px; max-width:880px">
+        <h2 style="font-size:19px">Мой словарь · 64 слова</h2>
+        <div style="flex:1"></div>
+        <button class="hbtn primary" id="btn-cards">Повторить 12 карточек</button>
+        <button class="hbtn">Экспорт в Anki</button>
+      </div>
+      <table>
+        <tr><th>СЛОВО</th><th>ПЕРЕВОД</th><th>ОТКУДА</th><th>ПРОГРЕСС</th></tr>
+        <tr><td><b>enfoque</b></td><td>подход, точка зрения</td><td class="sub">Economía I · лекция 5</td><td class="sub">новое</td></tr>
+        <tr><td><b>sostenido</b></td><td>устойчивый</td><td class="sub">Economía I · лекция 5</td><td class="sub">новое</td></tr>
+        <tr><td><b>déficit fiscal</b></td><td>бюджетный дефицит</td><td class="sub">Economía I · лекция 4</td><td class="sub">2 / 5 повторений</td></tr>
+        <tr><td><b>aumento</b></td><td>рост, увеличение</td><td class="sub">Economía I · лекция 3</td><td class="sub">выучено</td></tr>
+      </table>
+    </div></section>
+
+    <!-- ── КОНСПЕКТЫ ── -->
+    <section class="scr" id="scr-consp"><div class="lib">
+      <h2 style="font-size:19px; margin-bottom:16px">Конспекты</h2>
+      <table>
+        <tr><th>КОНСПЕКТ</th><th>ПРЕДМЕТ</th><th>ОБНОВЛЁН</th><th></th></tr>
+        <tr class="click"><td>Инфляция и денежная политика<div class="sub">конспект ИИ + 14 моих заметок, отредактирован</div></td>
+          <td class="sub">Economía I</td><td class="sub">сегодня</td><td><span class="badge">открыть</span></td></tr>
+        <tr class="click"><td>Спрос, предложение, эластичность</td>
+          <td class="sub">Economía I</td><td class="sub">7 авг</td><td><span class="badge">открыть</span></td></tr>
+        <tr class="click"><td>Сводный конспект к экзамену<div class="sub">ИИ собирает из всех лекций предмета</div></td>
+          <td class="sub">Economía I</td><td class="sub">—</td><td><span class="badge ok">создать</span></td></tr>
+      </table>
+    </div></section>
+
+    <!-- ── НАСТРОЙКИ ── -->
+    <section class="scr" id="scr-set"><div class="lib">
+      <h2 style="font-size:19px; margin-bottom:16px">Настройки</h2>
+      <div class="setrow"><b>Микрофон<small>петличка по Bluetooth даст лучший звук, чем встроенный</small></b>
+        <select><option>MacBook (встроенный)</option><option>Петличка BT</option></select></div>
+      <div class="setrow"><b>Точность распознавания<small>точнее = чуть больше задержка</small></b>
+        <select><option>Быстро (small)</option><option selected>Сбалансированно (medium)</option><option>Максимум (large-turbo)</option></select></div>
+      <div class="setrow"><b>Языки<small>язык лекций → язык субтитров</small></b>
+        <select><option selected>испанский → русский</option><option>испанский → английский</option></select></div>
+      <div class="setrow"><b>Работа без интернета<small>распознавание всегда офлайн; без сети перевод отключается, остаётся испанский текст</small></b>
+        <select><option selected>показывать оригинал</option></select></div>
+      <div class="setrow"><b>Папка экспорта<small>куда складывать Markdown-конспекты</small></b>
+        <button class="hbtn">~/Documents/Универ</button></div>
+    </div></section>
+
+  </div>
+</div>
+
+<!-- меню карточки -->
+<div class="menu" id="menu">
+  <button class="mi" id="m-star">⭐ <span>Важное<small>жёлтая метка на таймкоде — соберутся в конспекте</small></span><span class="k">⌘1</span></button>
+  <button class="mi" id="m-q">❓ <span>Не поняла<small>ИИ после лекции объяснит это место</small></span><span class="k">⌘2</span></button>
+  <button class="mi" id="m-note">📝 <span>В заметки цитатой<small>фраза упадёт в конспект со временем</small></span><span class="k">⌘L</span></button>
+  <button class="mi" id="m-ai">💬 <span>Объяснить в чате<small>ИИ разберёт фразу в контексте лекции</small></span></button>
+  <button class="mi" id="m-copy">⧉ <span>Копировать</span></button>
+</div>
+
+<!-- поповер слова -->
+<div class="pop" id="pop">
+  <b>enfoque</b> <span class="pos">сущ., м.р.</span><br>
+  подход, точка зрения<br>
+  <span style="color:var(--dim); font-size:11.5px">→ «tres enfoques principales»</span><br>
+  <button class="save" id="pop-save">+ В словарь</button>
+</div>
+
+<!-- показать крупно -->
+<div class="bigph" id="bigph">
+  <div>¿Puede repetir, por favor?</div>
+  <small>клик — закрыть</small>
+</div>
+
+<div class="shade" id="shade"></div>
+<div class="tourbox" id="tourbox">
+  <div class="step" id="t-step"></div>
+  <div class="tt" id="t-text"></div>
+  <div class="row">
+    <button class="hbtn" id="t-exit">Выйти</button><div class="sp"></div>
+    <button class="hbtn" id="t-prev">← Назад</button>
+    <button class="hbtn primary" id="t-next">Дальше →</button>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+/* ── навигация ── */
+function go(name){
+  $$('.scr').forEach(x => x.classList.remove('on'));
+  $('#scr-' + name).classList.add('on');
+  const railMap = {start:'start', live:'start', summary:'start', review:'lib',
+                   lib:'lib', vocab:'vocab', consp:'consp', set:'set'};
+  $$('#rail .ic').forEach(b => b.classList.toggle('on', b.dataset.s === railMap[name]));
+}
+$$('#rail .ic').forEach(b => b.onclick = () => go(b.dataset.s));
+$('#btn-start').onclick = () => go('live');
+$('#btn-stop').onclick  = () => go('summary');
+$('#btn-consp').onclick = () => go('review');
+$('#btn-later').onclick = () => go('lib');
+$('#lib-row').onclick   = () => go('review');
+
+/* ── вкладки правой панели ── */
+function tab(name){
+  $$('#side-tabs .tab').forEach(t => t.classList.toggle('on', t.dataset.p === name));
+  $$('#scr-live .panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + name));
+}
+$$('#side-tabs .tab').forEach(t => t.onclick = () => tab(t.dataset.p));
+
+/* ── меню «⋯» на карточке ── */
+let menuCard = null;
+function openMenu(btn){
+  menuCard = btn.closest('.card');
+  const r = btn.getBoundingClientRect(), m = $('#menu');
+  m.classList.add('on');
+  m.style.top = Math.min(r.bottom + 4, innerHeight - 300) + 'px';
+  m.style.left = Math.min(r.left - 220, innerWidth - 270) + 'px';
+}
+document.addEventListener('click', e => {
+  const d = e.target.closest('.dots');
+  if (d){ openMenu(d); e.stopPropagation(); return; }
+  if (!e.target.closest('.menu')) $('#menu').classList.remove('on');
+  if (!e.target.closest('.pop') && !e.target.closest('.es-w')) $('#pop').classList.remove('on');
+});
+$('#m-star').onclick = () => { menuCard.classList.toggle('star'); menuCard.classList.remove('q'); $('#menu').classList.remove('on'); };
+$('#m-q').onclick    = () => { menuCard.classList.toggle('q'); menuCard.classList.remove('star'); $('#menu').classList.remove('on'); };
+$('#m-note').onclick = () => {
+  const es = menuCard.querySelector('.es'), t = menuCard.querySelector('.t');
+  $('#p-notes .notes').append('\n> «' + (es ? es.textContent : '') + '» · ' + t.textContent.slice(0,5));
+  tab('notes'); $('#menu').classList.remove('on');
+};
+$('#m-ai').onclick = () => {
+  tab('chat');
+  const log = $('#chat-log');
+  log.insertAdjacentHTML('beforeend',
+    '<div class="msg me"><div class="who">Катя</div>объясни: «' +
+    menuCard.querySelector('.ru').textContent + '»</div>' +
+    '<div class="msg"><div class="who">ИИ</div>Он говорит, что у инфляции нет одной причины — экономисты объясняют её тремя разными теориями, и дальше он разберёт каждую по очереди.</div>');
+  log.scrollTop = log.scrollHeight;
+  $('#menu').classList.remove('on');
+};
+$('#m-copy').onclick = () => $('#menu').classList.remove('on');
+
+/* ── слово → поповер ── */
+document.addEventListener('click', e => {
+  const w = e.target.closest('.es-w');
+  if (!w) return;
+  const r = w.getBoundingClientRect(), p = $('#pop');
+  p.classList.add('on');
+  p.style.top = (r.bottom + 6) + 'px';
+  p.style.left = Math.min(r.left, innerWidth - 240) + 'px';
+});
+$('#pop-save').onclick = () => { $('#pop').classList.remove('on'); tab('dict'); };
+
+/* ── разное ── */
+$('#btn-big').onclick = () => $('#bigph').classList.add('on');
+$('#bigph').onclick   = () => $('#bigph').classList.remove('on');
+$('#qk-1').onclick = () => {
+  const log = $('#chat-log');
+  log.insertAdjacentHTML('beforeend',
+    '<div class="msg me"><div class="who">Катя</div>Что он только что сказал?</div>' +
+    '<div class="msg"><div class="who">ИИ</div>Последние две минуты: центральный банк печатает деньги для покрытия дефицита бюджета, и это давит на цены. Сейчас переходит к примеру с прошлогодними данными.</div>');
+  log.scrollTop = log.scrollHeight;
+};
+$('#btn-cards').onclick = () => alert('Здесь откроются карточки: слово → вспомнить перевод → «помню / не помню» (интервальное повторение).');
+$('#btn-strip').onclick = () => alert('Окно свернётся в узкую полоску субтитров поверх всех окон — под слайды лектора. В прототипе не показываю.');
+
+/* ── живое распознавание ── */
+const phrases = [
+  {es:"El banco central emite dinero para financiar el déficit fiscal",
+   ru:"Центральный банк выпускает деньги, чтобы финансировать бюджетный дефицит"},
+  {es:"y eso genera presión sobre los precios",
+   ru:"и это создаёт давление на цены"},
+  {es:"Vamos a ver un ejemplo con datos del año pasado",
+   ru:"Давайте посмотрим пример на данных прошлого года"},
+];
+let pi = 0, wi = 0;
+function tick(){
+  const p = phrases[pi], esW = p.es.split(' '), ruW = p.ru.split(' ');
+  wi++;
+  $('#live-zone .p-es .w').textContent = esW.slice(0, wi).join(' ');
+  $('#live-zone .p-ru .w').textContent =
+    ruW.slice(0, Math.round(wi / esW.length * ruW.length)).join(' ');
+  if (wi >= esW.length){
+    setTimeout(() => {
+      const f = $('#feed-live');
+      f.insertAdjacentHTML('beforeend',
+        `<div class="card"><div class="t">12:0${4+pi}:1${pi}</div>
+         <div class="ru">${p.ru}.</div><div class="es">${p.es}.</div>
+         <button class="dots">⋯</button></div>`);
+      f.scrollTop = f.scrollHeight;
+      $('#live-zone .p-es .w').textContent = '';
+      $('#live-zone .p-ru .w').textContent = '';
+      pi = (pi + 1) % phrases.length; wi = 0;
+    }, 900);
+    setTimeout(tick, 2600);
+  } else setTimeout(tick, 210 + Math.random()*160);
+}
+tick();
+
+/* ── экскурсия ── */
+const tour = [
+ {s:'start', el:'#course-pick', t:'Перед лекцией один вопрос: какой предмет. По нему запись, транскрипт и заметки лягут в нужную папку библиотеки.'},
+ {s:'start', el:'#micbar', t:'Проверка звука до старта: полоска должна дёргаться от речи. Тут же можно выбрать петличку вместо встроенного микрофона — звук решает всё.'},
+ {s:'start', el:'#btn-start', t:'«Начать» запускает сразу три вещи: запись аудио, распознавание и таймер. Больше ничего настраивать не надо.'},
+ {s:'live', el:'#live-zone', t:'Низ экрана — «сейчас говорит»: испанский появляется по словам, под ним растёт черновой перевод. Он серый и крупный — читаешь его, пока фраза не закончена.'},
+ {s:'live', el:'#feed-live', t:'Лектор сделал паузу — фраза «финализируется» и уезжает сюда, в транскрипт: русский крупно, испанский мелко, у каждой время.'},
+ {s:'live', el:'#menu', act:'menu', t:'У фраз ничего не висит — по клику на «⋯» (появляется при наведении) выпадает меню действий. Оно одно на все случаи.'},
+ {s:'live', el:'#m-star', act:'menu', t:'«Важное» — жёлтая пометка. После лекции все важные фразы соберутся в конспекте отдельным списком.'},
+ {s:'live', el:'#m-q', act:'menu', t:'«Не поняла» — красная пометка. После лекции ИИ возьмёт этот кусок транскрипта и объяснит его в конспекте.'},
+ {s:'live', el:'#m-note', act:'menu', t:'«В заметки цитатой» — фраза падает в конспект справа. Для последней прозвучавшей фразы то же самое делает ⌘L, не открывая меню.'},
+ {s:'live', el:'#word-demo', act:'pop', t:'Непонятное слово? Клик по нему в испанской строке — перевод, часть речи и пример. «+ В словарь» — слово сохраняется с контекстом.'},
+ {s:'live', el:'#p-notes', tab:'notes', t:'Вкладка «Заметки»: обычный текст, пишешь свои мысли — каждая строка автоматически привязана к таймкоду. Это заготовка конспекта.'},
+ {s:'live', el:'#p-tr', tab:'tr', t:'«Перевод» — быстрый переводчик ru⇄es⇄en: спросить преподавателя, понять слайд. Кнопка «Показать крупно» выводит фразу на весь экран — повернуть ноутбук собеседнику.'},
+ {s:'live', el:'#p-dict', tab:'dict', t:'«Словарь» — всё, что сохранила за лекцию, со временем и контекстом. Копится сам по клику на слова.'},
+ {s:'live', el:'#p-chat', tab:'chat', t:'«Чат ИИ» — локальная модель, которая видит транскрипт. Быстрые кнопки: «Что он только что сказал?» — спасение, если отвлеклась.'},
+ {s:'live', el:'#feed-live .catchup', t:'И на этот же случай — сводка: каждые 10 минут ИИ вставляет в ленту короткий пересказ последнего куска.'},
+ {s:'live', el:'#btn-strip', t:'«Свернуть в полоску» — окно превращается в узкие субтитры поверх всех окон, а на экране остаются слайды или PDF.'},
+ {s:'live', el:'#btn-stop', t:'«Стоп» — конец лекции. Ничего не теряется: аудио, транскрипт, заметки и слова уже сохранены локально.'},
+ {s:'summary', el:'#sum-stats', t:'Итог сразу после лекции: сколько записано и что накопилось. Отсюда два пути…'},
+ {s:'summary', el:'#btn-consp', t:'«Сделать конспект» — ИИ собирает краткое содержание, термины, разбор мест «не поняла» и вероятные вопросы к экзамену. Занимает минуту, можно и позже из библиотеки.'},
+ {s:'review', el:'#rev-side', t:'Конспект справа — редактируемый: правишь текст ИИ, твои заметки лежат во второй вкладке. Внизу экспорт: Markdown, PDF, Obsidian, Anki.'},
+ {s:'review', el:'#rev-player', t:'Режим повторения: плеер с метками на таймлайне. Клик по любой фразе транскрипта — перемотка аудио к этому месту.'},
+ {s:'lib', el:'#lib-table', t:'Библиотека: предметы, все лекции, статус конспектов. Поиск сверху ищет по всем транскриптам сразу — «где он говорил про инфляцию?»'},
+ {s:'vocab', el:'#btn-cards', t:'Словарь копится сам по ходу лекций. Перед экзаменом — карточки с интервальным повторением или экспорт в Anki.'},
+ {s:'consp', el:'#scr-consp table', t:'Все конспекты в одном месте. «Сводный конспект к экзамену» — ИИ собирает один документ из всех лекций предмета.'},
+ {s:'set', el:'#scr-set .setrow', t:'Настройки — один раз: микрофон, точность распознавания (точнее ↔ быстрее), языки. Всё работает локально, без сети пропадает только перевод.'},
+];
+let ti = -1, hlEl = null;
+function clearHl(){
+  if (hlEl) hlEl.classList.remove('hl');
+  hlEl = null;
+  $('#menu').classList.remove('on');
+  $('#pop').classList.remove('on');
+}
+function showStep(i){
+  clearHl();
+  ti = i;
+  const st = tour[i];
+  go(st.s);
+  if (st.tab) tab(st.tab);
+  if (st.act === 'menu') openMenu($('#dots-demo'));
+  if (st.act === 'pop'){
+    const w = $('#word-demo'), r = w.getBoundingClientRect(), p = $('#pop');
+    p.classList.add('on'); p.style.top = (r.bottom + 6) + 'px'; p.style.left = r.left + 'px';
+  }
+  hlEl = $(st.el);
+  if (hlEl){ hlEl.classList.add('hl'); hlEl.scrollIntoView({block:'nearest'}); }
+  $('#t-step').textContent = 'ШАГ ' + (i+1) + ' ИЗ ' + tour.length;
+  $('#t-text').textContent = st.t;
+  $('#t-prev').style.visibility = i ? 'visible' : 'hidden';
+  $('#t-next').textContent = i === tour.length - 1 ? 'Готово' : 'Дальше →';
+  $('#shade').classList.add('on');
+  $('#tourbox').classList.add('on');
+}
+function endTour(){
+  clearHl();
+  $('#shade').classList.remove('on');
+  $('#tourbox').classList.remove('on');
+  go('start'); tab('notes');
+}
+$('#btn-tour').onclick = () => showStep(0);
+$('#t-next').onclick = () => ti < tour.length - 1 ? showStep(ti + 1) : endTour();
+$('#t-prev').onclick = () => ti > 0 && showStep(ti - 1);
+$('#t-exit').onclick = endTour;
+</script>
+</body></html>

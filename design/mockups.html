@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lecture Copilot — макеты интерфейса</title>
+<style>
+:root{
+  --bg:#f6f6f5; --panel:#ffffff; --panel2:#fafafa; --line:#e7e7e5;
+  --txt:#1c1c1e; --dim:#8e8e93; --dimmer:#b5b5ba;
+  --acc:#0a6cff; --accsoft:#eef4ff;
+  --star:#e6a817; --red:#d0453e; --es:#8e8e93;
+}
+*{box-sizing:border-box; margin:0}
+body{background:var(--bg); color:var(--txt);
+  font:14px/1.5 -apple-system,"SF Pro Text","Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased}
+/* ── переключатель вариантов ─────────────────────────── */
+.switcher{position:sticky; top:0; z-index:50; display:flex; gap:6px;
+  padding:10px 16px; background:#ffffffee; backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line); align-items:center; flex-wrap:wrap}
+.switcher b{margin-right:8px; font-size:13px; color:var(--dim); font-weight:600}
+.sw{padding:6px 14px; border-radius:18px; border:1px solid transparent;
+  background:transparent; color:var(--dim); cursor:pointer; font-size:13px}
+.sw:hover{color:var(--txt)}
+.sw.on{background:var(--txt); color:#fff; font-weight:600}
+.variant{display:none}
+.variant.on{display:block}
+.note{padding:9px 16px; color:var(--dim); font-size:12.5px; background:#fff;
+  border-bottom:1px solid var(--line)}
+.note b{color:var(--txt)}
+/* ── общие блоки ─────────────────────────────────────── */
+.frame{height:calc(100vh - 98px); display:flex; flex-direction:column;
+  overflow:hidden; background:var(--bg)}
+.hdr{display:flex; align-items:center; gap:14px; padding:10px 18px;
+  background:var(--panel); border-bottom:1px solid var(--line); flex:none}
+.rec{display:flex; align-items:center; gap:7px; font-variant-numeric:tabular-nums;
+  font-weight:600; font-size:14px}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--red);
+  animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.3}}
+.course{color:var(--dim)}
+.lvl{display:flex; gap:2px; align-items:flex-end; height:13px; margin-left:auto}
+.lvl i{width:3px; background:#b9c4b9; border-radius:1px; animation:eq .7s infinite alternate}
+.lvl i:nth-child(1){height:5px}.lvl i:nth-child(2){height:10px; animation-delay:.15s}
+.lvl i:nth-child(3){height:7px; animation-delay:.3s}.lvl i:nth-child(4){height:12px; animation-delay:.1s}
+@keyframes eq{to{transform:scaleY(.4)}}
+.hbtn{border:1px solid var(--line); background:var(--panel); color:#444;
+  border-radius:8px; padding:5px 12px; font-size:12.5px; cursor:pointer}
+.hbtn:hover{background:var(--panel2)}
+.feed{flex:1; overflow-y:auto; padding:18px 22px; scroll-behavior:smooth}
+.card{margin:0 0 10px; padding:12px 16px; background:var(--panel);
+  border:1px solid var(--line); border-radius:12px; max-width:760px;
+  box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.card .t{font-size:11px; color:var(--dimmer); margin-bottom:3px;
+  font-variant-numeric:tabular-nums}
+.card .ru{font-size:16.5px; line-height:1.45}
+.card .es{font-size:12.5px; color:var(--es); margin-top:4px}
+.card.star{border-left:3px solid var(--star)}
+.card.star .t::after{content:" · важное"; color:var(--star); font-weight:600}
+.card.q{border-left:3px solid var(--red)}
+.card.q .t::after{content:" · не поняла"; color:var(--red); font-weight:600}
+.card.catchup{background:var(--accsoft); border-color:#d8e5fb}
+.card.catchup .t{color:var(--acc); font-weight:600}
+.card.catchup .ru{font-size:13.5px; color:#3a4a63}
+.es-w{cursor:pointer; border-bottom:1px dotted var(--dimmer)}
+.es-w:hover{color:var(--txt)}
+/* live-зона */
+.live{flex:none; border-top:1px solid var(--line); background:var(--panel);
+  padding:14px 22px 12px; box-shadow:0 -4px 14px rgba(0,0,0,.04)}
+.live .lbl{font-size:10.5px; letter-spacing:.12em; color:var(--acc); font-weight:700}
+.p-es{font-size:15px; color:var(--dim); min-height:23px; margin-top:5px}
+.p-es .caret{display:inline-block; width:2px; height:15px; background:var(--acc);
+  vertical-align:-2px; margin-left:3px; animation:blink 1s infinite}
+.p-ru{font-size:19px; min-height:29px; margin-top:2px; font-weight:500}
+.p-ru .rough{color:var(--dimmer); font-weight:400; font-size:12px; margin-right:6px}
+.chips{display:flex; gap:8px; margin-top:10px}
+.chip{border:1px solid var(--line); background:var(--panel2); color:#555;
+  padding:4px 12px; border-radius:15px; font-size:12px; cursor:pointer}
+.chip:hover{border-color:var(--dimmer)}
+.chip kbd{font-size:10px; color:var(--dimmer); margin-left:4px}
+/* правые панели */
+.side{display:flex; flex-direction:column; border-left:1px solid var(--line);
+  background:var(--panel); overflow:hidden}
+.side h3{font-size:11px; letter-spacing:.1em; color:var(--dim); padding:12px 14px 8px}
+.notes{flex:1; margin:0 12px 12px; background:var(--panel2);
+  border:1px solid var(--line); border-radius:10px; padding:12px;
+  font-size:13.5px; color:#3a3a3c; overflow-y:auto; white-space:pre-wrap}
+.tabs{display:flex; border-top:1px solid var(--line); flex:none; background:var(--panel)}
+.tab{flex:1; text-align:center; padding:9px 0; font-size:12.5px; color:var(--dim);
+  cursor:pointer; border-bottom:2px solid transparent}
+.tab.on{color:var(--txt); border-bottom-color:var(--txt); font-weight:600}
+.toolbody{padding:12px 14px; flex:none; background:var(--panel2); min-height:130px}
+.inp{width:100%; background:var(--panel); border:1px solid var(--line); color:var(--txt);
+  border-radius:9px; padding:8px 11px; font-size:13px; outline:none}
+.inp:focus{border-color:var(--acc)}
+.result{margin-top:9px; padding:9px 11px; background:var(--panel); border-radius:9px;
+  font-size:13.5px; border:1px solid var(--line)}
+.result .src{color:var(--dimmer); font-size:11.5px; margin-bottom:1px}
+.langrow{display:flex; gap:6px; margin-bottom:9px; font-size:11.5px}
+.langrow span{padding:3px 10px; border-radius:12px; background:var(--panel);
+  border:1px solid var(--line); color:var(--dim); cursor:pointer}
+.langrow span.on{color:var(--txt); border-color:var(--txt); font-weight:600}
+/* рейл (вариант C) */
+.rail{width:54px; flex:none; background:var(--panel); border-right:1px solid var(--line);
+  display:flex; flex-direction:column; align-items:center; padding-top:12px; gap:5px}
+.rail .ic{width:38px; height:38px; display:grid; place-items:center; font-size:16px;
+  border-radius:10px; cursor:pointer; opacity:.45}
+.rail .ic.on{background:var(--bg); opacity:1; outline:1px solid var(--line)}
+.rail .sp{flex:1}
+/* поповер словаря (декорация) */
+.pop{position:absolute; background:#fff; border:1px solid var(--line);
+  border-radius:11px; padding:10px 13px; font-size:12.5px; width:215px;
+  box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.pop b{font-size:14px}
+.pop .pos{color:var(--dim); font-size:11px}
+.pop .save{margin-top:7px; display:inline-block; color:var(--acc); cursor:pointer;
+  font-weight:600}
+/* ── обзор после лекции ──────────────────────────────── */
+.player{flex:none; display:flex; align-items:center; gap:14px; padding:12px 18px;
+  background:var(--panel); border-bottom:1px solid var(--line)}
+.play{width:34px; height:34px; border-radius:50%; background:var(--txt);
+  color:#fff; display:grid; place-items:center; font-size:13px; cursor:pointer}
+.track{flex:1; height:4px; background:var(--line); border-radius:3px; position:relative}
+.track .done{position:absolute; left:0; top:0; bottom:0; width:38%;
+  background:var(--txt); border-radius:3px}
+.track .mark{position:absolute; top:-4px; width:3px; height:12px; border-radius:2px}
+.karaoke .card.now{border-color:var(--acc); background:var(--accsoft)}
+.summary{padding:6px 16px 12px; overflow-y:auto; font-size:13.5px}
+.summary h4{font-size:11px; color:var(--dim); letter-spacing:.08em; margin:14px 0 6px}
+.summary li{margin:4px 0 4px 16px; color:#3a3a3c}
+.term{display:inline-block; background:var(--panel2); border:1px solid var(--line);
+  border-radius:7px; padding:2px 9px; margin:2px; font-size:12.5px}
+.term i{color:var(--dim); font-style:normal}
+.exp{display:flex; gap:8px; padding:12px 14px; border-top:1px solid var(--line)}
+.exp .hbtn{flex:1; text-align:center}
+/* ── библиотека ──────────────────────────────────────── */
+.lib{padding:24px; overflow-y:auto; height:100%}
+.lib .search{max-width:420px; margin-bottom:20px; background:var(--panel)}
+.courses{display:flex; gap:10px; margin-bottom:22px; flex-wrap:wrap}
+.cbadge{padding:9px 16px; border-radius:12px; border:1px solid var(--line);
+  background:var(--panel); cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.cbadge.on{border-color:var(--txt)}
+.cbadge small{display:block; color:var(--dim); font-size:11px}
+table{border-collapse:collapse; width:100%; max-width:880px; background:var(--panel);
+  border:1px solid var(--line); border-radius:12px; overflow:hidden}
+td,th{padding:11px 14px; text-align:left; border-bottom:1px solid var(--line);
+  font-size:13.5px}
+th{color:var(--dim); font-size:11px; letter-spacing:.06em; background:var(--panel2)}
+td .sub{color:var(--dimmer); font-size:11.5px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--panel2)}
+.badge{font-size:11.5px; padding:2px 9px; border-radius:10px; background:var(--panel2);
+  border:1px solid var(--line); color:var(--dim)}
+.badge.ok{color:#2e7d4f; border-color:#cfe5d8; background:#f2faf5}
+</style></head><body>
+
+<div class="switcher"><b>Макеты:</b>
+  <button class="sw on" data-v="a">A · Лента</button>
+  <button class="sw" data-v="b">B · Кокпит</button>
+  <button class="sw" data-v="c">C · Студия</button>
+  <button class="sw" data-v="review">После лекции</button>
+  <button class="sw" data-v="lib">Библиотека</button>
+</div>
+
+<!-- ══════════ ВАРИАНТ A · ЛЕНТА ══════════ -->
+<section class="variant on" id="v-a">
+<div class="note"><b>A «Лента»</b> — минимализм: весь экран под транскрипт, live-зона закреплена снизу, инструменты в выдвижной панели. Для «просто понять лекцию».</div>
+<div class="frame">
+  <div class="hdr">
+    <span class="rec"><span class="dot"></span> 47:12</span>
+    <span class="course">Economía I · Facultad de Cs. Económicas</span>
+    <div class="lvl"><i></i><i></i><i></i><i></i></div>
+    <button class="hbtn">Aa</button><button class="hbtn">Свернуть в полоску</button>
+    <button class="hbtn">Инструменты</button><button class="hbtn">■ Стоп</button>
+  </div>
+  <div class="feed">
+    <div class="card"><div class="t">12:01:40</div>
+      <div class="ru">Сегодня мы поговорим об инфляции и денежной политике.</div>
+      <div class="es">Hoy vamos a hablar de la <span class="es-w">inflación</span> y la política monetaria.</div></div>
+    <div class="card star"><div class="t">12:02:15</div>
+      <div class="ru">Инфляция — это устойчивый рост общего уровня цен.</div>
+      <div class="es">La inflación es el aumento sostenido del nivel general de precios.</div></div>
+    <div class="card"><div class="t">12:03:02</div>
+      <div class="ru">В Аргентине это явление имеет долгую историю, начиная с пятидесятых годов.</div>
+      <div class="es">En la Argentina este fenómeno tiene una larga historia, desde los años cincuenta.</div></div>
+    <div class="card q"><div class="t">12:03:48</div>
+      <div class="ru">Существует три основных подхода к объяснению её причин.</div>
+      <div class="es">Existen tres <span class="es-w">enfoques</span> principales para explicar sus causas.</div></div>
+  </div>
+  <div class="live">
+    <div class="lbl">СЕЙЧАС ГОВОРИТ</div>
+    <div class="p-es"><span class="w"></span><span class="caret"></span></div>
+    <div class="p-ru"><span class="rough">черновой перевод</span><span class="w"></span></div>
+    <div class="chips">
+      <span class="chip">Важное <kbd>⌘1</kbd></span>
+      <span class="chip">Не поняла <kbd>⌘2</kbd></span>
+      <span class="chip">Заметка <kbd>⌘N</kbd></span>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ══════════ ВАРИАНТ B · КОКПИТ ══════════ -->
+<section class="variant" id="v-b">
+<div class="note"><b>B «Кокпит»</b> — заметки всегда на экране, ⌘L кидает последнюю фразу в конспект цитатой. Внизу справа — переводчик, словарь и чат табами. Для активного конспектирования.</div>
+<div class="frame" style="flex-direction:row">
+  <div style="flex:1.55; display:flex; flex-direction:column; min-width:0">
+    <div class="hdr">
+      <span class="rec"><span class="dot"></span> 47:12</span>
+      <span class="course">Economía I</span>
+      <div class="lvl"><i></i><i></i><i></i><i></i></div>
+      <button class="hbtn">■ Стоп</button>
+    </div>
+    <div class="feed">
+      <div class="card"><div class="t">12:02:15</div>
+        <div class="ru">Инфляция — это устойчивый рост общего уровня цен.</div>
+        <div class="es">La inflación es el aumento sostenido del nivel general de precios.</div></div>
+      <div class="card star"><div class="t">12:03:48</div>
+        <div class="ru">Существует три основных подхода к объяснению её причин.</div>
+        <div class="es">Existen tres <span class="es-w">enfoques</span> principales para explicar sus causas.</div></div>
+      <div style="position:relative">
+        <div class="pop" style="left:120px; top:-8px">
+          <b>enfoque</b> <span class="pos">сущ., м.р.</span><br>
+          подход, точка зрения<br>
+          <span style="color:var(--dim); font-size:11.5px">→ «tres enfoques principales»</span><br>
+          <span class="save">+ В словарь</span>
+        </div>
+      </div>
+    </div>
+    <div class="live">
+      <div class="lbl">СЕЙЧАС ГОВОРИТ</div>
+      <div class="p-es"><span class="w"></span><span class="caret"></span></div>
+      <div class="p-ru"><span class="rough">черновой перевод</span><span class="w"></span></div>
+      <div class="chips">
+        <span class="chip">Важное <kbd>⌘1</kbd></span><span class="chip">Не поняла <kbd>⌘2</kbd></span>
+        <span class="chip">В заметки <kbd>⌘L</kbd></span>
+      </div>
+    </div>
+  </div>
+  <div class="side" style="flex:1">
+    <h3>МОИ ЗАМЕТКИ</h3>
+    <div class="notes"># Инфляция — лекция 4
+
+- инфляция = устойчивый рост цен (не разовый!)
+- в Аргентине — с 1950-х
+- 3 подхода к причинам ← важное
+  > «Existen tres enfoques principales…» · 12:03
+
+- спросить про монетаризм на семинаре</div>
+    <div class="tabs">
+      <div class="tab on">Перевод</div><div class="tab">Словарь</div><div class="tab">Чат ИИ</div>
+    </div>
+    <div class="toolbody">
+      <div class="langrow"><span class="on">ru → es</span><span>es → ru</span><span>en → es</span></div>
+      <input class="inp" value="можно повторить, пожалуйста?">
+      <div class="result">¿Puede repetir, por favor?
+        <div class="src">скопировано ⌘C</div></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ══════════ ВАРИАНТ C · СТУДИЯ ══════════ -->
+<section class="variant" id="v-c">
+<div class="note"><b>C «Студия»</b> — навигация слева (Лекция / Библиотека / Словарь / Конспекты), в ленте — catch-up-сводки от ИИ каждые 10 минут, справа переключаемые панели. Оболочка на всё приложение.</div>
+<div class="frame" style="flex-direction:row">
+  <div class="rail">
+    <div class="ic on" title="Лекция">🎙</div>
+    <div class="ic" title="Библиотека">📚</div>
+    <div class="ic" title="Словарь">📖</div>
+    <div class="ic" title="Конспекты">📝</div>
+    <div class="sp"></div><div class="ic" title="Настройки">⚙️</div>
+  </div>
+  <div style="flex:1.6; display:flex; flex-direction:column; min-width:0">
+    <div class="hdr">
+      <span class="rec"><span class="dot"></span> 47:12</span>
+      <span class="course">Economía I · лекция 4</span>
+      <div class="lvl"><i></i><i></i><i></i><i></i></div>
+      <button class="hbtn">Свернуть в полоску</button><button class="hbtn">■ Стоп</button>
+    </div>
+    <div class="feed">
+      <div class="card"><div class="t">12:02:15</div>
+        <div class="ru">Инфляция — это устойчивый рост общего уровня цен.</div>
+        <div class="es">La inflación es el aumento sostenido del nivel general de precios.</div></div>
+      <div class="card catchup"><div class="t">СВОДКА · последние 10 минут</div>
+        <div class="ru">Лектор ввёл определение инфляции, отличил её от разового скачка цен и начал разбор трёх подходов к причинам: монетаристского, структуралистского и инерционного. Дальше обещал примеры из истории Аргентины.</div></div>
+      <div class="card star"><div class="t">12:03:48</div>
+        <div class="ru">Существует три основных подхода к объяснению её причин.</div>
+        <div class="es">Existen tres enfoques principales para explicar sus causas.</div></div>
+    </div>
+    <div class="live">
+      <div class="lbl">СЕЙЧАС ГОВОРИТ</div>
+      <div class="p-es"><span class="w"></span><span class="caret"></span></div>
+      <div class="p-ru"><span class="rough">черновой перевод</span><span class="w"></span></div>
+      <div class="chips">
+        <span class="chip">Важное <kbd>⌘1</kbd></span><span class="chip">Не поняла <kbd>⌘2</kbd></span>
+        <span class="chip">Заметка <kbd>⌘N</kbd></span><span class="chip">Цитата <kbd>⌘L</kbd></span>
+      </div>
+    </div>
+  </div>
+  <div class="side" style="flex:1">
+    <div class="tabs" style="border-top:none; border-bottom:1px solid var(--line)">
+      <div class="tab">Заметки</div><div class="tab">Перевод</div>
+      <div class="tab">Словарь</div><div class="tab on">Чат ИИ</div>
+    </div>
+    <div style="flex:1; overflow-y:auto; padding:14px; font-size:13.5px">
+      <div style="color:var(--dimmer); font-size:11.5px; margin-bottom:10px">
+        локальный ИИ · видит транскрипт лекции</div>
+      <div class="result" style="margin-bottom:8px"><div class="src">Катя</div>
+        объясни простыми словами, что такое структуралистский подход, про который он говорит</div>
+      <div class="result"><div class="src">ИИ</div>
+        Структуралисты считают, что инфляция в таких странах, как Аргентина, растёт не из-за «печатания денег», а из-за узких мест в экономике: слабое сельское хозяйство, зависимость от импорта… Лектор в 12:03 назвал это вторым из трёх подходов.</div>
+    </div>
+    <div class="toolbody" style="border-top:1px solid var(--line)">
+      <input class="inp" placeholder="Спросить про лекцию…">
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ══════════ ПОСЛЕ ЛЕКЦИИ ══════════ -->
+<section class="variant" id="v-review">
+<div class="note"><b>Экран «После лекции»</b> (общий для всех вариантов) — плеер: клик по фразе перематывает аудио, текущая подсвечивается; справа авто-конспект от ИИ и экспорт. Метки видны на таймлайне.</div>
+<div class="frame" style="flex-direction:row">
+  <div style="flex:1.5; display:flex; flex-direction:column; min-width:0">
+    <div class="player">
+      <div class="play">▶</div>
+      <span style="font-variant-numeric:tabular-nums; color:var(--dim)">0:47:12&nbsp;/&nbsp;1:32:04</span>
+      <div class="track"><div class="done"></div>
+        <div class="mark" style="left:23%; background:var(--star)"></div>
+        <div class="mark" style="left:31%; background:var(--red)"></div>
+        <div class="mark" style="left:64%; background:var(--star)"></div></div>
+      <button class="hbtn">1×</button>
+    </div>
+    <div class="feed karaoke">
+      <div class="card"><div class="t">12:02:15</div>
+        <div class="ru">Инфляция — это устойчивый рост общего уровня цен.</div>
+        <div class="es">La inflación es el aumento sostenido del nivel general de precios.</div></div>
+      <div class="card now"><div class="t">12:03:48 · играет</div>
+        <div class="ru">Существует три основных подхода к объяснению её причин.</div>
+        <div class="es">Existen tres enfoques principales para explicar sus causas.</div></div>
+      <div class="card"><div class="t">12:04:31</div>
+        <div class="ru">Начнём с монетаристского объяснения.</div>
+        <div class="es">Empecemos por la explicación monetarista.</div></div>
+    </div>
+  </div>
+  <div class="side" style="flex:1">
+    <h3>АВТО-КОНСПЕКТ · редактируемый</h3>
+    <div class="summary">
+      <h4>КОРОТКО</h4>
+      <li>Инфляция = устойчивый рост цен; в Аргентине — с 1950-х</li>
+      <li>Три подхода: монетаристский, структуралистский, инерционный</li>
+      <li>Домашнее: глава 7, задачи 1–4 к семинару</li>
+      <h4>ТЕРМИНЫ (8)</h4>
+      <span class="term">inflación <i>· инфляция</i></span>
+      <span class="term">enfoque <i>· подход</i></span>
+      <span class="term">nivel de precios <i>· уровень цен</i></span>
+      <h4>РАЗОБРАТЬ (2 метки)</h4>
+      <li>12:03 — «не поняла»: что сказал про подходы → объяснение ИИ готово</li>
+      <h4>ВОЗМОЖНЫЕ ВОПРОСЫ К ЭКЗАМЕНУ</h4>
+      <li>Чем инфляция отличается от разового роста цен?</li>
+    </div>
+    <div class="exp">
+      <button class="hbtn">Markdown</button><button class="hbtn">PDF</button>
+      <button class="hbtn">Obsidian</button><button class="hbtn">Anki</button>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ══════════ БИБЛИОТЕКА ══════════ -->
+<section class="variant" id="v-lib">
+<div class="note"><b>Библиотека</b> — все лекции по предметам, поиск по всем транскриптам сразу, статус конспекта.</div>
+<div class="frame"><div class="lib">
+  <input class="inp search" placeholder="Поиск по всем лекциям… (например: инфляция)">
+  <div class="courses">
+    <div class="cbadge on">Economía I<small>8 лекций · 12 ч 40 м</small></div>
+    <div class="cbadge">Historia Argentina<small>6 лекций · 9 ч 05 м</small></div>
+    <div class="cbadge">Matemática<small>7 лекций · 10 ч 30 м</small></div>
+    <div class="cbadge" style="border-style:dashed">+ предмет</div>
+  </div>
+  <table>
+    <tr><th>ЛЕКЦИЯ</th><th>ДАТА</th><th>ДЛИТ.</th><th>МЕТКИ</th><th>КОНСПЕКТ</th></tr>
+    <tr><td>Лекция 4 · Инфляция и денежная политика<div class="sub">247 фраз · 14 заметок · 8 слов</div></td>
+      <td>сегодня</td><td>1:32</td><td class="sub">важное 3 · вопросы 2</td><td><span class="badge ok">готов</span></td></tr>
+    <tr><td>Лекция 3 · Спрос, предложение, эластичность<div class="sub">301 фраза · 22 заметки · 15 слов</div></td>
+      <td>7 авг</td><td>1:28</td><td class="sub">важное 5</td><td><span class="badge ok">готов</span></td></tr>
+    <tr><td>Лекция 2 · Введение в микроэкономику<div class="sub">280 фраз · 9 заметок</div></td>
+      <td>3 авг</td><td>1:30</td><td class="sub">вопросы 1</td><td><span class="badge">создать</span></td></tr>
+  </table>
+</div></div>
+</section>
+
+<script>
+/* переключение вариантов */
+document.querySelectorAll('.sw').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.sw').forEach(x => x.classList.remove('on'));
+  document.querySelectorAll('.variant').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  document.getElementById('v-' + b.dataset.v).classList.add('on');
+});
+
+/* анимация живого распознавания по словам */
+const phrases = [
+  {es:"El banco central emite dinero para financiar el déficit fiscal",
+   ru:"Центральный банк выпускает деньги, чтобы финансировать бюджетный дефицит"},
+  {es:"y eso genera presión sobre los precios",
+   ru:"и это создаёт давление на цены"},
+  {es:"Vamos a ver un ejemplo con datos del año pasado",
+   ru:"Давайте посмотрим пример на данных прошлого года"},
+];
+let pi = 0, wi = 0;
+function tick(){
+  const p = phrases[pi], esW = p.es.split(' '), ruW = p.ru.split(' ');
+  wi++;
+  const esTxt = esW.slice(0, wi).join(' ');
+  const ruTxt = ruW.slice(0, Math.round(wi / esW.length * ruW.length)).join(' ');
+  document.querySelectorAll('.p-es .w').forEach(e => e.textContent = esTxt);
+  document.querySelectorAll('.p-ru .w').forEach(e => e.textContent = ruTxt);
+  if (wi >= esW.length){
+    setTimeout(() => {
+      document.querySelectorAll('.variant.on .feed').forEach(f => {
+        if (f.closest('#v-review') || f.closest('#v-lib')) return;
+        const c = document.createElement('div');
+        c.className = 'card';
+        c.innerHTML = `<div class="t">12:0${4+pi}:1${pi}</div>
+          <div class="ru">${p.ru}.</div><div class="es">${p.es}.</div>`;
+        f.appendChild(c);
+        f.scrollTop = f.scrollHeight;
+      });
+      document.querySelectorAll('.p-es .w, .p-ru .w').forEach(e => e.textContent = '');
+      pi = (pi + 1) % phrases.length; wi = 0;
+    }, 900);
+    setTimeout(tick, 2600);
+  } else setTimeout(tick, 210 + Math.random()*160);
+}
+tick();
+</script>
+</body></html>

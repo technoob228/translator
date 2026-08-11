@@ -1,0 +1,10 @@
+faster-whisper
+sounddevice
+numpy
+deep-translator
+argostranslate
+fastapi
+uvicorn[standard]
+soundfile
+requests
+mlx-whisper
