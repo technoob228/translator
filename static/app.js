@@ -64,6 +64,13 @@ function connect() {
 }
 function handle(ev) {
   if (ev.type === "hello") {
+    // сервер перезапустился (например, после обновления) — обновляем
+    // и страницу, чтобы вкладка не жила неделями со старым интерфейсом
+    if (S.boot && ev.state.boot && ev.state.boot !== S.boot) {
+      location.reload();
+      return;
+    }
+    S.boot = ev.state.boot;
     S.settings = ev.state.settings;
     S.localLLM = !!ev.state.local_llm;
     renderLlm();

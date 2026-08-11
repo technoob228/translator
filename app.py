@@ -29,6 +29,9 @@ LOOP = None
 DEMO_FILE = None
 DEMO_SPEED = 3.0
 _last_level = 0.0
+BOOT_ID = str(time.time())   # «поколение» сервера: вкладка сама перезагрузится
+CTRL = threading.Lock()      # start/stop/pause/resume строго по одному:
+                             # старт во время недоделанного стопа ломал движок
 
 
 def emit(event):
@@ -117,7 +120,7 @@ def current_state():
                      (engine.lecture_id,))
     return {"running": engine.running, "paused": engine.paused, "lecture": lec,
             "elapsed": engine.elapsed(), "demo": bool(DEMO_FILE),
-            "local_llm": llm.local_available(),
+            "local_llm": llm.local_available(), "boot": BOOT_ID,
             "settings": db.get_settings()}
 
 
@@ -130,33 +133,41 @@ def api_state():
 
 @app.post("/api/lecture/start")
 def lecture_start(body: dict):
-    course = db.one("SELECT * FROM courses WHERE id=?", (body["course_id"],))
-    n = db.one("SELECT COUNT(*) n FROM lectures WHERE course_id=?", (course["id"],))["n"]
-    lid = db.start_lecture(course["id"], f"Лекция {n + 1}")
-    engine.stop_monitor()      # освобождаем устройство перед стартом
-    try:
-        engine.start(lid, demo_file=DEMO_FILE, demo_speed=DEMO_SPEED)
-    except Exception as e:
-        engine.start_monitor()
-        return {"error": str(e)}
-    return {"lecture_id": lid, "title": f"Лекция {n + 1}", "course": course["name"]}
+    with CTRL:      # ждём, пока дозавершится чужой stop — иначе гонка
+        course = db.one("SELECT * FROM courses WHERE id=?", (body["course_id"],))
+        n = db.one("SELECT COUNT(*) n FROM lectures WHERE course_id=?",
+                   (course["id"],))["n"]
+        lid = db.start_lecture(course["id"], f"Лекция {n + 1}")
+        engine.stop_monitor()      # освобождаем устройство перед стартом
+        try:
+            engine.start(lid, demo_file=DEMO_FILE, demo_speed=DEMO_SPEED)
+        except Exception as e:
+            # не оставляем лекцию-сироту в БД
+            db.run("DELETE FROM lectures WHERE id=?", (lid,))
+            engine.start_monitor()
+            return {"error": str(e)}
+        return {"lecture_id": lid, "title": f"Лекция {n + 1}",
+                "course": course["name"]}
 
 
 @app.post("/api/lecture/pause")
 def lecture_pause():
-    engine.pause()
+    with CTRL:
+        engine.pause()
     return {"paused": True}
 
 
 @app.post("/api/lecture/resume")
 def lecture_resume():
-    engine.resume()
+    with CTRL:
+        engine.resume()
     return {"paused": False}
 
 
 @app.post("/api/lecture/stop")
 def lecture_stop():
-    lid = engine.stop()
+    with CTRL:
+        lid = engine.stop()
     engine.start_monitor()
     return db.lecture_stats(lid)
 
