@@ -65,12 +65,17 @@ if [ "$OLLAMA" = yes ]; then
   ollama pull qwen3:4b-instruct || echo "Модель не скачалась — можно повторить позже: ollama pull qwen3:4b-instruct"
 fi
 
-say "Значок на рабочем столе"
+say "Значки на рабочем столе"
 cat > "$HOME/Desktop/Студия.command" <<EOF
 #!/bin/bash
 exec "\$HOME/translator/start.sh"
 EOF
 chmod +x "$HOME/Desktop/Студия.command"
+cat > "$HOME/Desktop/Студия — выключить.command" <<EOF
+#!/bin/bash
+exec "\$HOME/translator/stop.sh"
+EOF
+chmod +x "$HOME/Desktop/Студия — выключить.command"
 
 say "Готово"
 echo "Запускаю приложение… (в первый раз macOS спросит разрешение на микрофон — нажать «Разрешить»)"

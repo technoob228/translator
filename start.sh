@@ -24,6 +24,12 @@ if curl -fsS -m 1 http://localhost:8899/api/state >/dev/null 2>&1; then
   exit 0
 fi
 
+# Локальный ИИ: поднимаем обратно, если установлен, но выключен
+# (значок «выключить» гасит и его)
+if command -v ollama >/dev/null 2>&1 && ! pgrep -x ollama >/dev/null 2>&1; then
+  brew services start ollama >/dev/null 2>&1 || true
+fi
+
 mkdir -p data
 nohup .venv/bin/python app.py >> data/app.log 2>&1 &
 
