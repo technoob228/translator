@@ -9,7 +9,7 @@ const S = {
   lastPhrase: null, dictWords: [],
   chatMode: "local", chatHist: [], localLLM: false,
   review: null, reviewMd: "", settings: {}, trHist: [],
-  micTimer: null, noteTimer: null, draftSnap: null, snapUsed: false,
+  micTimer: null, noteTimer: null,
 };
 
 async function api(path, method = "GET", body = null) {
@@ -87,15 +87,9 @@ function handle(ev) {
   else if (ev.type === "partial") {
     renderPartialEs(ev.es || "");
     $("#p-ru").textContent = ev.ru || "";
-    if (ev.es) {          // снапшот черновика — для будущей заглушки
-      S.draftSnap = { es: ev.es, ru: ev.ru || "" };
-      S.snapUsed = false;
-    }
   }
   else if (ev.type === "queued") addPendingCard(ev);
-  else if (ev.type === "final") {
-    if (!ripenCard(ev.phrase.qid, ev.phrase)) addPhrase(ev.phrase, true);
-  }
+  else if (ev.type === "final") addFinal(ev);
   else if (ev.type === "final_drop") dropPending(ev.qid);
   else if (ev.type === "catchup") addCatchup(ev.text, ev.t0, true);
   else if (ev.type === "tick") {
@@ -204,7 +198,7 @@ $("#btn-start").onclick = async () => {
     if (!r.lecture_id) throw new Error(r.error || r.detail || "не удалось начать");
     S.lecture = { id: r.lecture_id, title: r.title, course: r.course };
     S.chatHist = []; S.dictWords = []; S.trHist = [];
-    S.draftSnap = null; pendingCards.clear();
+    pendingCards.clear();
     renderTrHist();
     $("#feed").innerHTML = ""; $("#notes").value = "";
     $("#chat-log").innerHTML = ""; $("#dict-list").innerHTML = "";
@@ -262,8 +256,9 @@ function phraseCard(p) {
   return div;
 }
 
-/* серые карточки-заглушки: фраза встаёт в транскрипт СРАЗУ после нарезки
-   (с текстом из черновика) и «дозревает» на месте, когда готов финал */
+/* серые карточки-заглушки: фраза встаёт в транскрипт СРАЗУ после нарезки —
+   с текстом черновика, который движок прислал в queued (распознанное
+   не пропадает с экрана) — и «дозревает» на месте, когда готов финал */
 const pendingCards = new Map();
 function addPendingCard(ev) {
   const feed = $("#feed");
@@ -271,11 +266,10 @@ function addPendingCard(ev) {
   const div = document.createElement("div");
   div.className = "card pending enter";
   div.dataset.qid = ev.qid;
-  const snap = !S.snapUsed && S.draftSnap ? S.draftSnap : null;
-  S.snapUsed = true;    // черновик достаётся только первой заглушке пачки
+  const es = ev.es || "", ru = ev.ru || "";
   div.innerHTML = `<div class="t">${fmt(ev.t0)}</div>
-    <div class="ru">${esc(snap ? (snap.ru || snap.es) : "…")}</div>
-    ${snap && snap.ru && snap.ru !== snap.es ? `<div class="es">${esc(snap.es)}</div>` : ""}`;
+    <div class="ru">${esc(ru || es || "…")}</div>
+    ${es && ru && ru !== es ? `<div class="es">${esc(es)}</div>` : ""}`;
   pendingCards.set(ev.qid, div);
   feed.appendChild(div);
   if (nearBottom) feed.scrollTop = feed.scrollHeight;
@@ -287,15 +281,37 @@ function addPendingCard(ev) {
   }, 60000);
 }
 
+/* финал: «дозревает» заглушка (или карточка добавляется в конец), а если
+   движок разрезал длинный кусок на предложения — хвост (extra) встаёт
+   сразу за первой карточкой, не после чужих заглушек */
+function addFinal(ev) {
+  const feed = $("#feed");
+  const nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 200;
+  let anchor = ripenCard(ev.phrase.qid, ev.phrase);
+  if (!anchor) {
+    addPhrase(ev.phrase, true);
+    anchor = feed.lastElementChild;
+  }
+  for (const p of ev.extra || []) {
+    const c = phraseCard(p);
+    c.classList.add("ripen");
+    anchor.after(c);
+    anchor = c;
+    S.lastPhrase = p;
+  }
+  if ((ev.extra || []).length && nearBottom)
+    feed.scrollTop = feed.scrollHeight;
+}
+
 function ripenCard(qid, p) {
   const div = pendingCards.get(qid);
-  if (!div) return false;
+  if (!div) return null;
   pendingCards.delete(qid);
   div.classList.remove("pending", "enter");
   div.classList.add("ripen");
   cardFill(div, p);
   S.lastPhrase = p;
-  return true;
+  return div;
 }
 
 function dropPending(qid) {

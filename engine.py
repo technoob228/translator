@@ -9,13 +9,17 @@
     это происходит СРАЗУ, даже если лектор уже говорит следующую фразу;
   - незавершённый хвост каждые полсекунды гонится через small →
     черновые слова в live-зоне (перевод черновика — с дебаунсом 1.2 с);
-  - если пауз нет больше 14 с — принудительная нарезка по границе сегментов.
+  - если пауз нет больше 10 с — принудительная нарезка по границе сегментов;
+    длинный финал (>8 с) режется на фразы по концам предложений
+    (таймкоды сегментов whisper) — карточки не разрастаются в простыни.
 
 Пауза: pause() закрывает микрофон и дописывает завершённую речь, resume()
 продолжает ту же лекцию; flac пишется инкрементально с flush ~каждые 2 с.
 
-События emit(dict): partial{es,ru} / queued{qid,t0,t1} (сегмент нарезан и
-ждёт финализации — UI сразу ставит серую карточку) / final{phrase+qid} /
+События emit(dict): partial{es,ru} / queued{qid,t0,t1,es,ru} (сегмент
+нарезан и ждёт финализации — UI сразу ставит серую карточку с текстом
+черновика: распознанное не исчезает с экрана) / final{qid,phrase,extra}
+(extra — хвост фраз, если длинный кусок разрезан на предложения) /
 final_drop{qid} (финал пустой — убрать заглушку) / level{rms} /
 status{text} / paused{on}.
 """
@@ -37,6 +41,7 @@ MAX_PENDING = 10.0     # принудительная нарезка длинн�
 DRAFT_WINDOW = 6.0
 MIN_PHRASE = 0.6
 PAD = 0.25             # запас аудио по краям сегмента для ASR, сек
+SPLIT_OVER = 8.0       # финал длиннее — режем на фразы по предложениям
 
 FINAL_MODEL = {"fast": None, "balanced": "medium", "max": "large-v3-turbo"}
 MLX_REPO = "mlx-community/whisper-large-v3-turbo"
@@ -164,6 +169,7 @@ class Engine:
         self._mlx = None
         self._last_partial = ""
         self._last_tr = (0.0, "", "")   # (time, es, ru)
+        self._drafts = []               # [t0_абс, es, ru] показанных черновиков
 
     # ---------- модели ----------
 
@@ -214,11 +220,12 @@ class Engine:
         return None if s == "auto" else s
 
     def _transcribe(self, name, audio, beam, lang):
+        """→ (сегменты [(start, end, text)], язык)."""
         segments, info = self.model(name).transcribe(
             audio, language=lang, beam_size=beam,
             condition_on_previous_text=False)
-        text = " ".join(s.text.strip() for s in segments).strip()
-        return text, info.language
+        segs = [(s.start, s.end, s.text.strip()) for s in segments]
+        return segs, info.language
 
     # ---------- приём аудио ----------
 
@@ -293,6 +300,7 @@ class Engine:
         # черновик незавершённого хвоста
         with self.alock:
             audio = self.pending.copy()
+            base = self.base_t
         ts = self._vad(audio)
         if not ts:
             return
@@ -302,10 +310,10 @@ class Engine:
             return
         lang = self._lang_setting() or self.detected_lang
         try:
-            es, _ = self._transcribe("small", chunk, beam=1, lang=lang)
+            segs, _ = self._transcribe("small", chunk, beam=1, lang=lang)
         except Exception:
             return
-        es = clean_asr(es)
+        es = clean_asr(" ".join(t for _, _, t in segs).strip())
         if not es or not self.running or self.paused:
             return
         # перевод черновика с дебаунсом
@@ -321,19 +329,42 @@ class Engine:
         else:
             ru = ru_prev
         self._emit_partial(es, ru)
+        self._remember_draft(base + start / SR, es, ru)
+
+    def _remember_draft(self, t0, es, ru):
+        """Помнит, какой черновик показан для куска речи, начавшегося в t0:
+        при нарезке этот текст сразу уедет в серую карточку-заглушку."""
+        d = self._drafts
+        if d and abs(d[-1][0] - t0) < 1.5:
+            d[-1] = [t0, es, ru]     # тот же кусок — черновик дозрел
+        else:
+            d.append([t0, es, ru])
+            del d[:-8]
+
+    def _take_draft(self, t0, t1):
+        """Черновик, показанный для сегмента [t0,t1] (если был)."""
+        for i in range(len(self._drafts) - 1, -1, -1):
+            if t0 - 0.8 <= self._drafts[i][0] < t1:
+                _, es, ru = self._drafts.pop(i)
+                return es, ru
+        return "", ""
 
     def _enqueue(self, audio, base, groups):
         """Ставит нарезанные сегменты в финальную очередь; на каждый сразу
-        эмитится queued — UI показывает серую карточку, не дожидаясь turbo."""
+        эмитится queued с текстом черновика — UI показывает карточку
+        с уже распознанным текстом, не дожидаясь turbo."""
         for g in groups:
             t0, t1 = base + g[0] / SR, base + g[1] / SR
             if t1 - t0 >= MIN_PHRASE:
                 p0 = max(0, g[0] - int(PAD * SR))
                 p1 = min(len(audio), g[1] + int(PAD * SR))
                 self._qid += 1
+                es, ru = self._take_draft(t0, t1)
                 self.emit({"type": "queued", "qid": self._qid,
-                           "t0": round(t0, 2), "t1": round(t1, 2)})
-                self.final_q.put((self._qid, t0, t1, audio[p0:p1]))
+                           "t0": round(t0, 2), "t1": round(t1, 2),
+                           "es": es, "ru": ru})
+                self.final_q.put((self._qid, t0, t1, audio[p0:p1],
+                                  base + p0 / SR))
 
     @staticmethod
     def _merge(segs, gap=0.35):
@@ -356,38 +387,69 @@ class Engine:
     def _final_loop(self):
         while self.running or not self.final_q.empty():
             try:
-                qid, t0, t1, audio = self.final_q.get(timeout=0.4)
+                qid, t0, t1, audio, off = self.final_q.get(timeout=0.4)
             except queue.Empty:
                 continue
             self.final_busy = True
             try:
-                self._finalize(qid, t0, t1, audio)
+                self._finalize(qid, t0, t1, audio, off)
             finally:
                 self.final_busy = False
 
-    def _finalize(self, qid, t0, t1, audio):
+    @staticmethod
+    def _sentences(segs, t0, t1, off):
+        """Короткий финал — одна фраза; длинный (принудительная нарезка
+        речи без пауз) режется на карточки по концам предложений.
+        segs — [(start, end, text)] от whisper, off — абсолютное время
+        начала куска аудио. → [(t0, t1, text)], уже через clean_asr."""
+        if t1 - t0 <= SPLIT_OVER:
+            es = clean_asr(" ".join(t for _, _, t in segs).strip())
+            return [(t0, t1, es)] if es else []
+        out, cur, cs = [], [], None
+        for a, b, txt in segs:
+            if not txt.strip():
+                continue
+            if cs is None:
+                cs = a
+            cur.append((b, txt))
+            dur = b - cs
+            if (dur >= 2.5 and txt.rstrip()[-1:] in ".!?…") or dur >= 9:
+                out.append((cs, b, " ".join(t for _, t in cur)))
+                cur, cs = [], None
+        if cur:
+            out.append((cs, cur[-1][0], " ".join(t for _, t in cur)))
+        parts = []
+        for a, b, txt in out:
+            es = clean_asr(txt.strip())
+            if es:
+                parts.append((max(t0, off + a), min(t1, off + b), es))
+        return parts
+
+    def _finalize(self, qid, t0, t1, audio, off):
         s = db.get_settings()
         name = FINAL_MODEL.get(s["accuracy"]) or "small"
         lang = self._lang_setting()
-        es = None
+        segs = None
         if name == "large-v3-turbo" and self._mlx_available():
             try:
                 import mlx_whisper
                 r = mlx_whisper.transcribe(
                     audio, path_or_hf_repo=MLX_REPO, language=lang,
                     condition_on_previous_text=False)
-                es, detected = r["text"].strip(), r.get("language") or "es"
+                segs = [(sg["start"], sg["end"], sg["text"].strip())
+                        for sg in r["segments"]]
+                detected = r.get("language") or "es"
             except Exception:
-                es = None       # GPU-путь сломался — тихо падаем на CPU
-        if es is None:
+                segs = None     # GPU-путь сломался — тихо падаем на CPU
+        if segs is None:
             try:
-                es, detected = self._transcribe(name, audio, beam=5, lang=lang)
+                segs, detected = self._transcribe(name, audio, beam=5, lang=lang)
             except Exception as e:
                 self.emit({"type": "status", "text": f"ошибка ASR: {e}"})
                 self.emit({"type": "final_drop", "qid": qid})
                 return
-        es = clean_asr(es)
-        if not es:
+        parts = self._sentences(segs, t0, t1, off)
+        if not parts:
             self.emit({"type": "final_drop", "qid": qid})
             return
         if lang is None and detected and detected != self.detected_lang:
@@ -396,25 +458,29 @@ class Engine:
                        "определён язык: " +
                        self.LANG_NAMES.get(detected, detected)})
         src = lang or detected or "auto"
-        ru = None if src == s["target_lang"] else translate(
-            es, src, s["target_lang"], prefer="argos")
-        if src != s["target_lang"]:
-            if not ru or ru.strip().casefold() == es.strip().casefold():
-                self._tr_misses += 1
-                if self._tr_misses == 3:
-                    cur = self.LANG_NAMES.get(src, src)
-                    self.emit({"type": "status", "text":
-                               f"⚠ перевод не получается — проверь язык лекции "
-                               f"(сейчас: {cur}) и интернет"})
-            else:
-                self._tr_misses = 0
-        pid = db.run(
-            "INSERT INTO phrases(lecture_id,t0,t1,es,ru) VALUES(?,?,?,?,?)",
-            (self.lecture_id, round(t0, 2), round(t1, 2), es, ru or ""))
-        self.emit({"type": "final", "phrase": {
-            "id": pid, "qid": qid, "t0": round(t0, 2), "t1": round(t1, 2),
-            "es": es, "ru": ru or "", "mark": "",
-            "no_net": ru is None}})
+        phrases = []
+        for p0, p1, es in parts:
+            ru = None if src == s["target_lang"] else translate(
+                es, src, s["target_lang"], prefer="argos")
+            if src != s["target_lang"]:
+                if not ru or ru.strip().casefold() == es.strip().casefold():
+                    self._tr_misses += 1
+                    if self._tr_misses == 3:
+                        cur = self.LANG_NAMES.get(src, src)
+                        self.emit({"type": "status", "text":
+                                   f"⚠ перевод не получается — проверь язык "
+                                   f"лекции (сейчас: {cur}) и интернет"})
+                else:
+                    self._tr_misses = 0
+            pid = db.run(
+                "INSERT INTO phrases(lecture_id,t0,t1,es,ru) VALUES(?,?,?,?,?)",
+                (self.lecture_id, round(p0, 2), round(p1, 2), es, ru or ""))
+            phrases.append({
+                "id": pid, "qid": qid, "t0": round(p0, 2), "t1": round(p1, 2),
+                "es": es, "ru": ru or "", "mark": "",
+                "no_net": ru is None})
+        self.emit({"type": "final", "qid": qid,
+                   "phrase": phrases[0], "extra": phrases[1:]})
 
     # ---------- управление ----------
 
@@ -520,6 +586,7 @@ class Engine:
         self.paused = False
         self._last_partial = ""
         self._last_tr = (0.0, "", "")
+        self._drafts = []
         self._tr_misses = 0
         self._qid = 0
         self.running = True
@@ -577,6 +644,7 @@ class Engine:
         if ts:
             self._enqueue(audio, base, self._merge(ts))
             self._advance(ts[-1]["end"])
+        self._drafts = []
         if self.recorder:
             try:
                 self.recorder.flush()

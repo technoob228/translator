@@ -11,8 +11,9 @@ if ! git pull --ff-only; then
 fi
 .venv/bin/pip install -q -r requirements.txt
 
-# Перезапуск сервера, если он запущен
-if pkill -f '\.venv/bin/python app\.py' 2>/dev/null; then
+# Перезапуск сервера, если он запущен. Паттерн без .venv: питон из venv
+# виден в ps как …/Python.framework/…/Python app.py
+if pkill -if "python.* app\.py" 2>/dev/null; then
   echo "Перезапускаю сервер…"
   sleep 1
 fi
